@@ -10,7 +10,7 @@ function memoryCache(){const wallets=new Map(),metadata=new Map();return {getWal
 const response=(data,status=200)=>Response.json(data,{status});
 test('Alchemy follows every page, filters supported contracts, deduplicates, and sends key only server-side',async()=>{
   const requests=[];
-  const fetcher=async url=>{requests.push(new URL(url));return response(requests.length===1?{ownedNfts:[nft(),{contract:{address:owner},tokenId:'90'}],pageKey:'next-page'}:{ownedNfts:[nft(),nft('2')]});};
+  const fetcher=async(url,options)=>{assert.equal(options.redirect,'manual','Edge runtime requires manual redirect handling');requests.push(new URL(url));return response(requests.length===1?{ownedNfts:[nft(),{contract:{address:owner},tokenId:'90'}],pageKey:'next-page'}:{ownedNfts:[nft(),nft('2')]});};
   const assets=await alchemyOwnership(owner,registry.collections,{alchemyKey:'server-key',fetcher});assert.equal(assets.length,2);assert.equal(requests[1].searchParams.get('pageKey'),'next-page');assert.equal(requests[0].searchParams.getAll('contractAddresses[]').length,5);assert.equal(assets[0].ownership_source,'alchemy');assert.ok(!JSON.stringify(assets).includes('server-key'));
 });
 test('OpenSea account fallback follows next cursors and filters unsupported contracts',async()=>{
