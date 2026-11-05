@@ -1,5 +1,5 @@
 import {EVM_ADDRESS, matchUtility} from './core.js';
-import {pricePresentation,PRICE_REFRESH_MS} from './prices.js';
+import {pricePresentation,PRICE_REFRESH_MS,sumAssetValues,formatEth} from './prices.js';
 import {SORT_OPTIONS,sortAssets,acquisitionTime} from './sorting.js';
 
 const paths = {
@@ -89,10 +89,15 @@ function statusBadge(status) {return `<span class="status ${status.toLowerCase()
 function toast(message,error=false) {const el=document.createElement('div');el.className='toast'+(error?' error':'');el.textContent=message;$('#toasts').append(el);setTimeout(()=>el.remove(),5000);}
 function pageHeading(title,subtitle,action=true) {return `<div class="page-heading"><div><h1>${title}</h1><p>${subtitle}</p></div>${action?`<div class="heading-actions"><span class="mode-label">${icon('shield')}Read-only mode</span></div>`:''}</div>`;}
 function demoBar() {return state.mode==='demo'?`<div class="demo-bar"><span>${icon('info')} 샘플 포트폴리오 · NFT 이미지와 보유 정보는 체험용입니다.</span><a class="text-btn" href="#wallets">내 지갑 조회 ${icon('arrow')}</a></div>`:'';}
+function totalValueContent(){
+  const summary=sumAssetValues(state.assets);const pending=state.assets.some(a=>pricePending.has(a.id));
+  const value=state.mode==='demo'?'—':summary.value_eth==null?'—':formatEth(summary.value_eth);
+  let foot=state.mode==='demo'?'샘플 자산 · 평가액 미제공':!state.assets.length?'지원 컬렉션 NFT 기준':pending?'가격 조회 중 · '+summary.priced_count+'/'+summary.total_count+'개 확인':summary.unpriced_count?'확인된 가격 합계 · 미확인 '+summary.unpriced_count+'개':'판매가·Portfolio 평가액 합산';
+  return '<div class="stat-label">Total value (ETH) '+icon('diamond')+'</div><div class="stat-number total-value-number"><span class="total-value-amount">'+esc(value)+'</span><small>ETH</small></div><div class="stat-foot" aria-live="polite">'+esc(foot)+'</div>';
+}
 function statCards() {
-  const countCollections=new Set(state.assets.map(a=>a.collection)).size;
   const matched=matching();const live=matched.filter(u=>u.status==='LIVE').length;
-  return `<div class="stats"><div class="stat"><div class="stat-label">Total assets ${icon('layers')}</div><div class="stat-number">${state.assets.length}<small>NFTs in your portfolio</small></div><div class="stat-foot">${state.mode==='demo'?'Sample portfolio':'지원 컬렉션 자산만 표시'}</div></div><div class="stat"><div class="stat-label">Added wallets ${icon('wallet')}</div><div class="stat-number">${state.wallets.length}<small>on Ethereum</small></div><div class="stat-foot">소유권 인증 없이 읽기 전용 조회</div></div><div class="stat stat-lime"><div class="stat-label">Matched utilities ${icon('sparkles')}</div><div class="stat-number">${matched.length}<small>possibilities to explore</small></div><div class="stat-foot"><span class="tiny-dot"></span>${live} LIVE · ${matched.length-live} sample scenarios</div></div><div class="stat"><div class="stat-label">Collections ${icon('overview')}</div><div class="stat-number">${countCollections}<small>in the Yuga ecosystem</small></div><div class="stat-foot">BAYC, MAYC, Koda & more</div></div></div>`;
+  return '<div class="stats"><div class="stat stat-lime" id="total-value-stat">'+totalValueContent()+'</div><div class="stat"><div class="stat-label">Total NFTs '+icon('layers')+'</div><div class="stat-number">'+state.assets.length+'<small>NFTs in your portfolio</small></div><div class="stat-foot">'+(state.mode==='demo'?'Sample portfolio':'지원 컬렉션 자산만 표시')+'</div></div><div class="stat"><div class="stat-label">Added wallets '+icon('wallet')+'</div><div class="stat-number">'+state.wallets.length+'<small>on Ethereum</small></div><div class="stat-foot">소유권 인증 없이 읽기 전용 조회</div></div><div class="stat stat-lime"><div class="stat-label">Matched utilities '+icon('sparkles')+'</div><div class="stat-number">'+matched.length+'<small>possibilities to explore</small></div><div class="stat-foot"><span class="tiny-dot"></span>'+live+' LIVE · '+(matched.length-live)+' sample scenarios</div></div></div>';
 }
 function assetArt(asset) {
   const art=collectionFor(asset.collection)?.art||'land';
@@ -112,6 +117,7 @@ function priceMarkup(asset,detail=false){
   return row+(price?'<p class="price-source">'+esc(source)+'</p>':'')+(price?.kind==='PORTFOLIO_VALUE'?'<p class="price-source">Portfolio 추정 가치 · 컬렉션 최고 구매 제안 기준'+(price.original_currency==='WETH'?' (WETH를 ETH와 1:1로 표시)':'')+'</p>':'')+(!asset.demo?'<a class="source-link" href="'+esc(assetOpenSeaUrl(asset))+'" target="_blank" rel="noopener noreferrer">OpenSea에서 확인 ↗</a>':'');
 }
 function updatePriceElements(){
+  const total=$('#total-value-stat');if(total)total.innerHTML=totalValueContent();
   reorderAssetCards();
   $$('[data-price-asset]').forEach(el=>{const asset=state.assets.find(a=>a.id===el.dataset.priceAsset);if(asset)el.innerHTML=priceMarkup(asset,el.dataset.priceDetail==='true');});
 }

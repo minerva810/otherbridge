@@ -22,8 +22,11 @@ try{
   await cdp('Emulation.setDeviceMetricsOverride',{width:1440,height:1150,deviceScaleFactor:1,mobile:false});
   await cdp('Page.navigate',{url:'http://localhost:3000'});await pause(1600);await evaluate('document.fonts.ready.then(()=>true)');
   assert.equal(await evaluate('document.querySelectorAll(".asset-card").length'),0);
+  assert.deepEqual(await evaluate('[...document.querySelectorAll(".stats .stat-label")].map(el=>el.textContent.trim())'),['Total value (ETH)','Total NFTs','Added wallets','Matched utilities']);
+  assert.equal(await evaluate('document.querySelector(".total-value-amount").textContent'),'0');
   await evaluate('location.hash="wallets"');await pause(100);await click('[data-action="demo"]');await pause(100);
   assert.equal(await evaluate('document.querySelectorAll(".asset-card").length'),6);
+  assert.equal(await evaluate('document.querySelector(".total-value-amount").textContent'),'—');
   assert.equal(await evaluate('document.querySelector("#nav-asset-count").textContent'),'6');
   assert.equal(await evaluate('document.documentElement.scrollWidth > window.innerWidth'),false);
   const capture=async name=>{const image=await cdp('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});await writeFile(path.join(out,name),Buffer.from(image.data,'base64'));};
@@ -65,6 +68,8 @@ try{
   assert.ok(await evaluate('[...document.querySelectorAll(".asset-card .asset-price-row")].every(el=>!el.textContent.includes("Buy now")&&el.querySelector("strong"))'),'Asset prices are shown without Buy now labels');
   assert.equal(await evaluate('document.querySelector("#asset-sort").value'),'PRICE_DESC');
   const displayedPrices=await evaluate('[...document.querySelectorAll(".asset-card .asset-price-row .text-lime")].map(el=>Number(el.textContent.replace(/ETH|,/g,"").trim()))');
+  const totalEth=Number(await evaluate('document.querySelector(".total-value-amount").textContent.replace(/,/g,"")'));
+  assert.ok(Math.abs(totalEth-displayedPrices.reduce((sum,value)=>sum+value,0))<1e-10,'Total value refreshes with real price API results');
   assert.deepEqual(displayedPrices,[...displayedPrices].sort((a,b)=>b-a),'Live price responses reorder cards highest first');
   assert.ok(await evaluate('!document.querySelector("#asset-grid").textContent.includes("컬렉션 바닥가")'));
   await click(`[data-asset="${fixture.asset_id}"]`);for(let i=0;i<100;i++){if(await evaluate('document.querySelector("#modal-content").textContent.includes("opensea")'))break;await pause(200);}

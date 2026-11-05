@@ -17,3 +17,5 @@
 .asset-price-row strong{white-space:normal;overflow-wrap:anywhere;text-align:right;min-width:0;max-width:76%}.asset-price-row>span{flex-shrink:0}.asset-price-detail .asset-price-row strong{max-width:80%}
 
 .asset-price-row{justify-content:flex-end}.asset-price-row strong,.asset-price-detail .asset-price-row strong{max-width:100%}.list-view .asset-price-row{justify-content:flex-start}
+
+.total-value-number{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px}.total-value-amount{min-width:0;max-width:100%;overflow-wrap:anywhere;font-size:clamp(20px,2.1vw,32px);font-variant-numeric:tabular-nums}.total-value-number small{margin-left:3px}#total-value-stat .stat-foot{line-height:1.6}

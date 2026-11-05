@@ -2,13 +2,24 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {ethFromWei,listingEth,portfolioValue,createPriceService} from '../lib/market-prices.js';
-import {pricePresentation,formatEth,isCurrentPrice} from '../public/prices.js';
+import {pricePresentation,formatEth,isCurrentPrice,sumAssetValues} from '../public/prices.js';
 import {createBridgeApi} from '../lib/bridge-api.js';
 const registry=JSON.parse(await readFile(new URL('../public/registry.json',import.meta.url)));
 const contract=registry.collections[0].contract.toLowerCase();const asset={id:contract+':1',contract,token_id:'1'};
 const listing={status:'ACTIVE',chain:'ethereum',price:{current:{currency:'ETH',decimals:18,value:'1234567890123456789'}}};
 function cache(){const m=new Map();return {getMetadata:async k=>m.get(k),setMetadata:async(k,v)=>m.set(k,structuredClone(v))};}
 const quote=(overrides={})=>({quote_schema:3,kind:'LISTING',currency:'ETH',value_eth:'1.234567890123456789',quoted_at:new Date().toISOString(),...overrides});
+test('total asset value sums listing and Portfolio prices exactly in wei and deduplicates NFTs',()=>{
+  const assets=[{id:'a',market_price:quote({value_eth:'0.1'})},{id:'b',market_price:quote({kind:'PORTFOLIO_VALUE',value_eth:'0.200000000000000001'})},{id:'a',market_price:quote({value_eth:'0.1'})}];
+  const total=sumAssetValues(assets);assert.equal(total.value_eth,'0.300000000000000001');assert.equal(total.priced_count,2);assert.equal(total.estimated_count,1);assert.equal(total.unpriced_count,0);
+  assert.equal(assets.length,3);
+});
+test('total value excludes missing, expired, wrong-currency and demo prices, and distinguishes no assets from unknown value',()=>{
+  const unknown=[{id:'a'},{id:'b',market_price:quote({expires_at:'2020-01-01'})},{id:'c',market_price:quote({currency:'WETH'})},{id:'d',demo:true,market_price:quote()}];
+  assert.equal(sumAssetValues([]).value_eth,'0');assert.equal(sumAssetValues(unknown).value_eth,null);
+  const partial=sumAssetValues([...unknown,{id:'e',market_price:quote({value_eth:'5.27'})}]);
+  assert.equal(partial.value_eth,'5.27');assert.equal(partial.unpriced_count,4);assert.equal(partial.total_count,5);
+});
 test('exact wei conversion and ETH display preserve every digit without exchange rates or rounding',()=>{
   assert.equal(ethFromWei('1234567890123456789',18),'1.234567890123456789');
   assert.equal(ethFromWei('1',18),'0.000000000000000001');assert.equal(ethFromWei('1',6),null);
