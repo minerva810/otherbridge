@@ -14,12 +14,18 @@ export function matchUtility(utility, assets) {
   });
   return {utility_id: utility.id, match_status: !matched ? 'NOT_MATCHED' : utility.verification_level === 'NOT_VERIFIABLE' ? 'NOT_VERIFIABLE' : 'OWNERSHIP_MATCHED', additional_verification_required: true, reason: matched ? utility.rule_reason : '필요 자산 또는 속성이 현재 조회 결과에 없습니다.'};
 }
+export function safeImageUrl(image) {
+  if(typeof image !== 'string') return '';
+  if(image.startsWith('ipfs://')) return 'https://ipfs.io/ipfs/'+image.slice(7).replace(/^ipfs\//,'');
+  try {const url=new URL(image);return url.protocol==='https:'&&!url.username&&!url.password?url.href:'';}catch{return '';}
+}
 export function normalizeNft(nft, owner, collections) {
+  if(!nft || typeof nft!=='object') return null;
   const collection = collections.find(item => item.contract.toLowerCase() === nft.contract?.address?.toLowerCase());
   if (!collection || nft.tokenId == null) return null;
   const image = nft.image?.cachedUrl || nft.image?.thumbnailUrl || nft.image?.originalUrl || nft.raw?.metadata?.image || '';
-  const safeImage = /^https:\/\//i.test(image) ? image : image.startsWith('ipfs://') ? 'https://ipfs.io/ipfs/' + image.slice(7).replace(/^ipfs\//, '') : '';
-  return {id: `${collection.contract.toLowerCase()}:${nft.tokenId}`, collection: collection.id, chain: 'ethereum', contract: collection.contract.toLowerCase(), token_id: String(nft.tokenId), asset_type: collection.type, image: safeImage, traits: Array.isArray(nft.raw?.metadata?.attributes) ? nft.raw.metadata.attributes.filter(t => t && typeof t.trait_type === 'string' && ['string', 'number', 'boolean'].includes(typeof t.value)).map(t => ({trait_type: t.trait_type, value: t.value})) : [], owner_wallet: owner.toLowerCase(), last_synced_at: new Date().toISOString(), demo: false};
+  const safeImage = safeImageUrl(image);
+  return {id: `${collection.contract.toLowerCase()}:${nft.tokenId}`, collection: collection.id, chain: 'ethereum', contract: collection.contract.toLowerCase(), token_id: String(nft.tokenId), asset_type: collection.type, name: String(nft.name||'').slice(0,250), description: String(nft.description||'').slice(0,2000), image: safeImage, traits: Array.isArray(nft.raw?.metadata?.attributes) ? nft.raw.metadata.attributes.filter(t => t && typeof t.trait_type === 'string' && ['string', 'number', 'boolean'].includes(typeof t.value)).map(t => ({trait_type: t.trait_type, value: t.value})) : [], owner_wallet: owner.toLowerCase(), last_synced_at: new Date().toISOString(), demo: false, ownership_source:'alchemy', metadata_sources:['alchemy']};
 }
 export function dedupeAssets(assets) {
   return [...new Map(assets.map(asset => [asset.id, asset])).values()];

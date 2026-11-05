@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {normalizeWallets,normalizeNft,dedupeAssets,matchUtility} from '../dist/core.js';
-const registry=JSON.parse(await readFile(new URL('../dist/registry.json',import.meta.url)));
+import {normalizeWallets,normalizeNft,dedupeAssets,matchUtility} from '../public/core.js';
+const registry=JSON.parse(await readFile(new URL('../public/registry.json',import.meta.url)));
 const wallet='0x1234567890abcdef1234567890abcdef12345678';
 test('wallet validation rejects invalid input and deduplicates case-insensitively',()=>{
   assert.deepEqual(normalizeWallets([wallet,wallet.toUpperCase().replace('0X','0x')]),[wallet]);

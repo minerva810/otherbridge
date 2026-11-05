@@ -1,5 +1,5 @@
 import {spawn} from 'node:child_process';
-import {mkdir,writeFile} from 'node:fs/promises';
+import {mkdir,writeFile,readFile} from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import assert from 'node:assert/strict';
@@ -21,6 +21,8 @@ try{
   await cdp('Page.enable');await cdp('Runtime.enable');
   await cdp('Emulation.setDeviceMetricsOverride',{width:1440,height:1150,deviceScaleFactor:1,mobile:false});
   await cdp('Page.navigate',{url:'http://localhost:3000'});await pause(1600);await evaluate('document.fonts.ready.then(()=>true)');
+  assert.equal(await evaluate('document.querySelectorAll(".asset-card").length'),0);
+  await evaluate('location.hash="wallets"');await pause(100);await click('[data-action="demo"]');await pause(100);
   assert.equal(await evaluate('document.querySelectorAll(".asset-card").length'),6);
   assert.equal(await evaluate('document.querySelector("#nav-asset-count").textContent'),'6');
   assert.equal(await evaluate('document.documentElement.scrollWidth > window.innerWidth'),false);
@@ -37,7 +39,10 @@ try{
   await evaluate('document.querySelector("#wallet-input").value="0x1234567890abcdef1234567890abcdef12345678"');await click('#wallet-form button');await pause(100);
   assert.equal(await evaluate('document.querySelectorAll(".wallet-row").length'),1);assert.equal(await evaluate('document.querySelector("#nav-asset-count").textContent'),'0');
   await evaluate('document.querySelector("#wallet-input").value="0x1234567890abcdef1234567890abcdef12345678"');await click('#wallet-form button');assert.ok((await evaluate('document.querySelector("#wallet-error").textContent')).includes('이미'));
-  await click('[data-action="resolve"]');await pause(450);assert.ok((await evaluate('document.querySelector("#api-notice").textContent')).includes('ALCHEMY_API_KEY'));
+  await click('[data-action="resolve"]');
+  for(let i=0;i<100;i++){if(await evaluate('location.hash==="#portfolio"'))break;await pause(200);}
+  assert.equal(await evaluate('location.hash'),'#portfolio');assert.equal(await evaluate('document.querySelectorAll(".asset-card").length'),0);
+  await evaluate('location.hash="wallets"');await pause(100);
   await click('[data-remove-wallet]');assert.equal(await evaluate('document.querySelectorAll(".wallet-row").length'),0);
   await click('[data-action="demo"]');await pause(100);await evaluate('location.hash="portfolio"');await pause(100);
   await evaluate('const s=document.querySelector("#asset-search");s.value="7214";s.dispatchEvent(new Event("input"))');assert.equal(await evaluate('document.querySelectorAll(".asset-card").length'),1);
@@ -47,7 +52,13 @@ try{
   await cdp('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});await pause(200);
   assert.equal(await evaluate('document.documentElement.scrollWidth > window.innerWidth'),false);await capture('mobile.png');
   await click('#menu-button');assert.equal(await evaluate('document.querySelector("#sidebar").classList.contains("open")'),true);await click('[data-nav="wallets"]');await pause(100);assert.equal(await evaluate('document.querySelector("#sidebar").classList.contains("open")'),false);
+  const fixture=JSON.parse(await readFile(path.join(root,'.local','live-fixture.json'),'utf8'));
+  await evaluate(`document.querySelector('#wallet-input').value=${JSON.stringify(fixture.owner)}`);await click('#wallet-form button');await pause(100);await click('[data-action="resolve"]');
+  for(let i=0;i<150;i++){if(await evaluate('location.hash==="#portfolio"'))break;await pause(200);}
+  assert.equal(await evaluate('location.hash'),'#portfolio');assert.ok(await evaluate('document.querySelectorAll(".real-image").length>0'));
+  await click(`[data-asset="${fixture.asset_id}"]`);for(let i=0;i<100;i++){if(await evaluate('document.querySelector("#modal-content").textContent.includes("opensea")'))break;await pause(200);}
+  assert.ok(await evaluate('document.querySelector("#modal-content").textContent.includes("opensea")'));await click('#modal-close');
   await cdp('Emulation.setDeviceMetricsOverride',{width:1440,height:1150,deviceScaleFactor:1,mobile:false});await evaluate('location.hash="overview"');await pause(200);await capture('desktop-final.png');
   assert.deepEqual(errors,[],'No uncaught browser exceptions');
-  console.log('PASS: desktop and mobile layouts, asset filtering/details, utility status/filter, onboarding progress, wallet validation/deduplication/removal, missing API key state, search, analytics, mobile navigation. No uncaught browser errors. Screenshots: .local/qa/');
+  console.log('PASS: desktop/mobile layouts, filters, details, guide, wallet validation, real API empty result, live owned NFTs/images, dynamic OpenSea details, analytics and mobile navigation. No uncaught browser errors. Screenshots: .local/qa/');
 }finally{socket?.close();browser.kill();}
