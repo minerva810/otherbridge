@@ -33,7 +33,7 @@ try{
   await click('#modal [data-utility="koda-play"]');assert.ok((await evaluate('document.querySelector("#modal-content").textContent')).includes('SIMULATED'));
   await click('#modal-close');await evaluate('location.hash="utilities"');await pause(100);
   await click('[data-utility-filter="LIVE"]');assert.equal(await evaluate('document.querySelectorAll(".registry-card").length'),1);
-  await evaluate('location.hash="overview"');await pause(100);await click('.hero [data-action="start-guide"]');assert.equal(await evaluate('location.hash'),'#onboarding');
+  await evaluate('location.hash="overview"');await pause(100);assert.equal(await evaluate('document.querySelector(".hero [data-action=\\"start-guide\\"]")'),null);await click('.recommendation-panel [data-action="start-guide"]');assert.equal(await evaluate('location.hash'),'#onboarding');
   await click('[data-complete-step="0"]');assert.ok((await evaluate('document.querySelector(".guide-progress-label").textContent')).includes('1 of 3'));
   await evaluate('location.hash="wallets"');await pause(100);await evaluate('document.querySelector("#wallet-input").value="bad"');await click('#wallet-form button');assert.ok((await evaluate('document.querySelector("#wallet-error").textContent')).includes('EVM'));
   await evaluate('document.querySelector("#wallet-input").value="0x1234567890abcdef1234567890abcdef12345678"');await click('#wallet-form button');await pause(100);
@@ -53,7 +53,9 @@ try{
   assert.equal(await evaluate('document.documentElement.scrollWidth > window.innerWidth'),false);await capture('mobile.png');
   await click('#menu-button');assert.equal(await evaluate('document.querySelector("#sidebar").classList.contains("open")'),true);await click('[data-nav="wallets"]');await pause(100);assert.equal(await evaluate('document.querySelector("#sidebar").classList.contains("open")'),false);
   const fixture=JSON.parse(await readFile(path.join(root,'.local','live-fixture.json'),'utf8'));
-  await evaluate(`document.querySelector('#wallet-input').value=${JSON.stringify(fixture.owner)}`);await click('#wallet-form button');await pause(100);await click('[data-action="resolve"]');
+  await evaluate('location.hash="overview"');await pause(100);
+  await evaluate('document.querySelector("#hero-wallet-input").value="bad"');await click('#hero-wallet-form button');assert.ok((await evaluate('document.querySelector("#hero-wallet-error").textContent')).includes('EVM'));
+  await evaluate(`document.querySelector('#hero-wallet-input').value=${JSON.stringify(fixture.owner)}`);await click('#hero-wallet-form button');
   for(let i=0;i<150;i++){if(await evaluate('location.hash==="#portfolio"'))break;await pause(200);}
   assert.equal(await evaluate('location.hash'),'#portfolio');assert.ok(await evaluate('document.querySelectorAll(".real-image").length>0'));
   await click(`[data-asset="${fixture.asset_id}"]`);for(let i=0;i<100;i++){if(await evaluate('document.querySelector("#modal-content").textContent.includes("opensea")'))break;await pause(200);}
