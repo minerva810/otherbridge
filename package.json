@@ -1,0 +1,11 @@
+{
+  "name": "other-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --experimental-sqlite server.mjs",
+    "start": "node --experimental-sqlite server.mjs",
+    "check": "node --check server.mjs && node --check dist/app.js && node --test tests/core.test.mjs"
+  }
+}
