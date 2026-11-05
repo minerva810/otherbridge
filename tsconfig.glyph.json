@@ -1,0 +1,6 @@
+{
+  "extends":"./tsconfig.json",
+  "compilerOptions":{"target":"ES2022","incremental":false,"types":["node"]},
+  "include":["client/glyph-entry.tsx"],
+  "exclude":["node_modules","dist","public/glyph"]
+}

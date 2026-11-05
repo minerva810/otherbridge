@@ -34,7 +34,10 @@ try{
   await click('#modal-close');await evaluate('location.hash="utilities"');await pause(100);
   await click('[data-utility-filter="LIVE"]');assert.equal(await evaluate('document.querySelectorAll(".registry-card").length'),1);
   await evaluate('location.hash="overview"');await pause(100);assert.equal(await evaluate('document.querySelector(".hero [data-action=\\"start-guide\\"]")'),null);await click('.recommendation-panel [data-action="start-guide"]');assert.equal(await evaluate('location.hash'),'#onboarding');
-  await click('[data-complete-step="0"]');assert.ok((await evaluate('document.querySelector(".guide-progress-label").textContent')).includes('1 of 3'));
+  for(let i=0;i<150;i++){if(await evaluate('Boolean(document.querySelector(".glyph-login-card"))'))break;await pause(200);}
+  assert.ok(await evaluate('Boolean(document.querySelector(".glyph-login-card"))'));
+  assert.equal(await evaluate('document.querySelectorAll("[data-complete-step]").length'),0);
+  assert.ok(await evaluate('document.querySelector(".glyph-login-card").textContent.includes("Sign up with Glyph")'));
   await evaluate('location.hash="wallets"');await pause(100);await evaluate('document.querySelector("#wallet-input").value="bad"');await click('#wallet-form button');assert.ok((await evaluate('document.querySelector("#wallet-error").textContent')).includes('EVM'));
   await evaluate('document.querySelector("#wallet-input").value="0x1234567890abcdef1234567890abcdef12345678"');await click('#wallet-form button');await pause(100);
   assert.equal(await evaluate('document.querySelectorAll(".wallet-row").length'),1);assert.equal(await evaluate('document.querySelector("#nav-asset-count").textContent'),'0');

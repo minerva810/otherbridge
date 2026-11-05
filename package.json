@@ -6,17 +6,25 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "dev:local": "node --experimental-sqlite server.mjs",
-    "check": "node --check server.mjs && node --check public/app.js && node --test tests/core.test.mjs tests/providers.test.mjs",
+    "dev:local": "node scripts/build-glyph.mjs && node --experimental-sqlite server.mjs",
+    "check": "node --check server.mjs && node --check public/app.js && node --test tests/core.test.mjs tests/providers.test.mjs tests/onboarding.test.mjs",
     "test:live": "node tests/live-api.mjs",
     "install:ci": "node scripts/install-ci.mjs",
     "dev": "node scripts/run-framework.mjs dev",
-    "build": "node scripts/run-framework.mjs build",
+    "build": "node scripts/build-glyph.mjs && node scripts/run-framework.mjs build",
     "start": "node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js dev --config dist/server/wrangler.json --local --persist-to .wrangler/state --ip 127.0.0.1 --inspector-port 0",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
+    "@use-glyph/sdk-react": "2.2.9",
+    "wagmi": "^2.19.5",
+    "viem": "^2.57.5",
+    "@tanstack/react-query": "^5.76.0",
+    "@privy-io/react-auth": "3.14.1",
+    "@privy-io/wagmi": "4.0.19",
+    "@privy-io/cross-app-connect": "0.2.1",
+    "@rainbow-me/rainbowkit": "^2.2.11",
     "@base-ui/react": "^1.7.0",
     "@hookform/resolvers": "^5.7.1",
     "@shadcn/react": "^0.3.0",
