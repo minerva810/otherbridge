@@ -1,4 +1,5 @@
 import {EVM_ADDRESS, matchUtility} from './core.js';
+import {pricePresentation} from './prices.js';
 
 const paths = {
   overview:'<rect x="3" y="3" width="7" height="7" rx="1.4"/><rect x="14" y="3" width="7" height="7" rx="1.4"/><rect x="3" y="14" width="7" height="7" rx="1.4"/><rect x="14" y="14" width="7" height="7" rx="1.4"/>',
@@ -96,9 +97,43 @@ function assetArt(asset) {
   const art=collectionFor(asset.collection)?.art||'land';
   return asset.image?`<img class="real-image" src="${esc(asset.image)}" alt="${esc(collectionFor(asset.collection)?.short)} #${esc(asset.token_id)}" loading="lazy" referrerpolicy="no-referrer" data-fallback="true">`:asset.demo?`<div class="nft-art art-${art}" role="img" aria-label="체험용 ${esc(collectionFor(asset.collection)?.short)} 일러스트"></div>`:`<div class="image-placeholder">${icon('layers')}<span>Image unavailable</span></div>`;
 }
+
+const pricePending=new Set();
+const priceAttempts=new Map();
+function priceMarkup(asset,detail=false){
+  if(asset.demo)return '<div class="asset-price-row"><span>가격</span><span>샘플 · 가격 미제공</span></div>';
+  const cached=asset.market_price;const price=cached&&Date.now()-Date.parse(cached.quoted_at)>3600000?null:cached;const p=pricePresentation(price,!cached||pricePending.has(asset.id));
+  const time=price?.quoted_at?formatDate(price.quoted_at):'';
+  const old=price?.stale||price?.quoted_at&&Date.now()-Date.parse(price.quoted_at)>300000;
+  const source=price?'OpenSea · '+time+(old?' · 이전 조회값':''):'';
+  const row='<div class="asset-price-row" title="'+esc(source)+'"><span>'+esc(p.label)+(old&&p.available?' · 이전값':'')+'</span><strong class="'+(p.available?'text-lime':'price-muted')+'">'+esc(p.amount)+'</strong></div>';
+  if(!detail)return row;
+  return row+(price?'<p class="price-source">'+esc(source)+'</p>':'')+(price?.kind==='COLLECTION_FLOOR'?'<p class="price-source">컬렉션 전체의 최저 판매가입니다. 이 NFT의 개별 판매가가 아닙니다.</p>':'')+(price?.reason==='LISTING_UNVERIFIED'?'<p class="price-source">개별 판매 등록 상태를 확인하지 못해 컬렉션 바닥가를 표시합니다.</p>':'')+(p.available?'<a class="source-link" href="'+esc(price.source_url)+'" target="_blank" rel="noopener noreferrer">OpenSea에서 확인 ↗</a>':'');
+}
+function updatePriceElements(){
+  $$('[data-price-asset]').forEach(el=>{const asset=state.assets.find(a=>a.id===el.dataset.priceAsset);if(asset)el.innerHTML=priceMarkup(asset,el.dataset.priceDetail==='true');});
+}
+async function loadAssetPrices(){
+  const now=Date.now();const assets=state.assets.filter(a=>!a.demo&&a.contract&&!pricePending.has(a.id)&&now-(priceAttempts.get(a.id)||0)>30000&&(!a.market_price||a.market_price.stale||now-Date.parse(a.market_price.quoted_at)>(a.market_price.kind==='UNAVAILABLE'?30000:300000)));
+  for(const a of assets){pricePending.add(a.id);priceAttempts.set(a.id,now);}
+  if(!assets.length)return;updatePriceElements();
+  for(let i=0;i<assets.length;i+=12){
+    const batch=assets.slice(i,i+12);
+    try{
+      const response=await fetch('/api/v1/assets/prices',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({assets:batch.map(a=>({contract:a.contract,token_id:a.token_id}))}),signal:AbortSignal.timeout(90000)});
+      if(!response.ok)throw new Error('PRICE_UNAVAILABLE');const data=await response.json();
+      const quotes=new Map(data.prices.map(p=>[p.id,p.market_price]));
+      state.assets=state.assets.map(a=>quotes.has(a.id)?{...a,market_price:quotes.get(a.id)}:a);
+    }catch{
+      const ids=new Set(batch.map(a=>a.id));
+      state.assets=state.assets.map(a=>ids.has(a.id)?{...a,market_price:a.market_price?.value_eth!=null&&Date.now()-Date.parse(a.market_price.quoted_at)<3600000?{...a.market_price,stale:true}:{kind:'UNAVAILABLE',quoted_at:new Date().toISOString(),reason:'PROVIDER_UNAVAILABLE'}}:a);
+    }finally{for(const a of batch)pricePending.delete(a.id);save();updatePriceElements();}
+  }
+}
+
 function assetCard(asset) {
   const c=collectionFor(asset.collection);const count=matching([asset]).length;
-  return `<button class="asset-card" data-asset="${esc(asset.id)}" aria-label="${esc(c.short)} #${esc(asset.token_id)} 상세 보기"><div class="asset-image">${assetArt(asset)}<span class="card-tag">${icon(asset.asset_type==='LAND'?'globe':'layers')}${esc(c.short)}</span><span class="card-chain" title="Ethereum">⟠</span></div><div class="asset-body"><div class="asset-collection">${esc(c.name)}<span class="verified">${icon('verified')}</span></div><h3 class="asset-title">${esc(c.short)} #${esc(asset.token_id)}</h3><div class="card-bottom"><span>${icon('sparkles')}${count} utilities</span><span class="wallet-id">${short(asset.owner_wallet)}</span>${icon('arrow')}</div></div></button>`;
+  return `<button class="asset-card" data-asset="${esc(asset.id)}" aria-label="${esc(c.short)} #${esc(asset.token_id)} 상세 보기"><div class="asset-image">${assetArt(asset)}<span class="card-tag">${icon(asset.asset_type==='LAND'?'globe':'layers')}${esc(c.short)}</span><span class="card-chain" title="Ethereum">⟠</span></div><div class="asset-body"><div class="asset-collection">${esc(c.name)}<span class="verified">${icon('verified')}</span></div><h3 class="asset-title">${esc(c.short)} #${esc(asset.token_id)}</h3><div data-price-asset="${esc(asset.id)}">${priceMarkup(asset)}</div><div class="card-bottom"><span>${icon('sparkles')}${count} utilities</span><span class="wallet-id">${short(asset.owner_wallet)}</span>${icon('arrow')}</div></div></button>`;
 }
 function tabs() {return `<div class="collection-tabs" role="group" aria-label="컬렉션 필터">${[{id:'ALL',short:'All assets'},...registry.collections].map(c=>`<button class="tab ${state.filter===c.id?'selected':''}" data-filter="${c.id}" aria-pressed="${state.filter===c.id}">${esc(c.short)}${c.id==='ALL'?`<span class="tab-count">${state.assets.length}</span>`:''}</button>`).join('')}</div>`;}
 function filteredAssets() {return state.assets.filter(a=>(state.filter==='ALL'||a.collection===state.filter)&&(!state.search||`${collectionFor(a.collection)?.name} ${a.token_id} ${a.owner_wallet}`.toLowerCase().includes(state.search.toLowerCase())));}
@@ -157,6 +192,7 @@ function render() {
   if(glyphModule)glyphModule.setContext(glyphContext());
   window.dispatchEvent(new Event('otherbridge:render'));
   if(state.page==='onboarding')void ensureGlyph().catch(()=>{});
+  if(state.page==='overview'||state.page==='portfolio')void loadAssetPrices();
 }
 function bindContent(root=$('#main-content')) {
   $$('[data-action]',root).forEach(el=>el.addEventListener('click',()=>handleAction(el.dataset.action)));
@@ -178,7 +214,7 @@ function closeModal() {$('#modal').close();}
 function showAsset(id,detailState='') {
   const a=state.assets.find(a=>a.id===id);if(!a)return;state.activeAssetId=id;if(!detailState)event('asset_clicked',{asset_id:id});
   const c=collectionFor(a.collection);const utilities=matching([a]);
-  modal(`<div class="modal-asset-header"><div class="modal-asset-art">${assetArt(a)}</div><div><div class="detail-label">${esc(c.name)}</div><h2 id="modal-title" class="modal-title">${esc(c.short)} #${esc(a.token_id)}</h2><div class="modal-subtitle">Ethereum · ${esc(a.asset_type)}<br>${short(a.owner_wallet)}</div><div class="traits">${a.traits.slice(0,4).map(t=>`<span class="trait"><small>${esc(t.trait_type)}</small>${esc(t.value)}</span>`).join('')||'<span class="trait">속성 정보 없음</span>'}</div></div></div><div class="modal-section"><h3>What you can explore <span class="text-lime">${utilities.length}</span></h3>${utilities.map(u=>`<button class="detail-utility" data-utility="${u.id}"><span class="utility-icon ${u.status==='SIMULATED'?'purple':''}">${icon(u.icon)}</span><div><strong>${esc(u.title_ko)}</strong><small>${a.demo?'Sample ownership match':matchUtility(u,[a]).match_status}</small></div>${statusBadge(u.status)}${icon('arrow')}</button>`).join('')}</div><div class="modal-notice">${a.demo?'이 NFT와 일러스트는 서비스 체험용 샘플입니다. 실제 NFT 이미지·보유 정보가 아닙니다.':'조회 주소: '+esc(a.owner_wallet)+'<br>마지막 조회: '+esc(formatDate(a.last_synced_at))}<br>공개 보유 조건과 최종 캠페인 자격은 별개이며 추가 확인이 필요합니다.</div><div class="modal-buttons"><button class="btn btn-primary" data-action="start-guide">나의 온보딩 가이드 ${icon('arrow')}</button><button class="btn btn-outline" data-copy="${esc(a.owner_wallet)}">${icon('copy')}주소 복사</button></div>`,c.short+' · ASSET DETAILS');
+  modal(`<div class="modal-asset-header"><div class="modal-asset-art">${assetArt(a)}</div><div><div class="detail-label">${esc(c.name)}</div><h2 id="modal-title" class="modal-title">${esc(c.short)} #${esc(a.token_id)}</h2><div class="modal-subtitle">Ethereum · ${esc(a.asset_type)}<br>${short(a.owner_wallet)}</div><div class="asset-price-detail" data-price-detail="true" data-price-asset="${esc(a.id)}">${priceMarkup(a,true)}</div><div class="traits">${a.traits.slice(0,4).map(t=>`<span class="trait"><small>${esc(t.trait_type)}</small>${esc(t.value)}</span>`).join('')||'<span class="trait">속성 정보 없음</span>'}</div></div></div><div class="modal-section"><h3>What you can explore <span class="text-lime">${utilities.length}</span></h3>${utilities.map(u=>`<button class="detail-utility" data-utility="${u.id}"><span class="utility-icon ${u.status==='SIMULATED'?'purple':''}">${icon(u.icon)}</span><div><strong>${esc(u.title_ko)}</strong><small>${a.demo?'Sample ownership match':matchUtility(u,[a]).match_status}</small></div>${statusBadge(u.status)}${icon('arrow')}</button>`).join('')}</div><div class="modal-notice">${a.demo?'이 NFT와 일러스트는 서비스 체험용 샘플입니다. 실제 NFT 이미지·보유 정보가 아닙니다.':'조회 주소: '+esc(a.owner_wallet)+'<br>마지막 조회: '+esc(formatDate(a.last_synced_at))}<br>공개 보유 조건과 최종 캠페인 자격은 별개이며 추가 확인이 필요합니다.</div><div class="modal-buttons"><button class="btn btn-primary" data-action="start-guide">나의 온보딩 가이드 ${icon('arrow')}</button><button class="btn btn-outline" data-copy="${esc(a.owner_wallet)}">${icon('copy')}주소 복사</button></div>`,c.short+' · ASSET DETAILS');
   if(!a.demo){
     const detail=document.createElement('div');detail.className='modal-notice';detail.textContent=detailState||'Alchemy · OpenSea에서 최신 메타데이터를 확인하는 중…';$('#modal-content').append(detail);
     if(!detailState)loadAssetDetails(id);
@@ -189,7 +225,7 @@ async function loadAssetDetails(id){
   try{
     const response=await fetch(`/api/v1/assets/${encodeURIComponent(id)}?owner=${encodeURIComponent(asset.owner_wallet)}`,{signal:AbortSignal.timeout(45000)});
     const data=await response.json();if(!response.ok)throw new Error(data.error||'상세 정보를 불러오지 못했습니다.');
-    state.assets=state.assets.map(a=>a.id===id?data.asset:a);save();
+    state.assets=state.assets.map(a=>a.id===id?{...data.asset,market_price:a.market_price}:a);save();
     if($('#modal').open&&state.activeAssetId===id&&$('#modal-content .modal-asset-header')){render();showAsset(id,`보유 정보: ${data.asset.ownership_source||'Alchemy'} · 메타데이터: ${(data.asset.metadata_sources||[]).join(' + ')}${data.warning?' · '+data.warning:''}`);}
   }catch(error){if($('#modal').open&&state.activeAssetId===id&&$('#modal-content .modal-asset-header'))showAsset(id,error.message);}
 }

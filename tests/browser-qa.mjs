@@ -61,7 +61,12 @@ try{
   await evaluate(`document.querySelector('#hero-wallet-input').value=${JSON.stringify(fixture.owner)}`);await click('#hero-wallet-form button');
   for(let i=0;i<150;i++){if(await evaluate('location.hash==="#portfolio"'))break;await pause(200);}
   assert.equal(await evaluate('location.hash'),'#portfolio');assert.ok(await evaluate('document.querySelectorAll(".real-image").length>0'));
+  for(let i=0;i<300;i++){if(await evaluate('Boolean(document.querySelector(".asset-card .asset-price-row .text-lime"))'))break;await pause(200);}
+  assert.ok(await evaluate('Boolean(document.querySelector(".asset-card .asset-price-row .text-lime"))'),'Live ETH price is displayed on asset cards');
+  assert.ok(await evaluate('document.querySelector(".asset-card .asset-price-row").textContent.includes("ETH")'));
   await click(`[data-asset="${fixture.asset_id}"]`);for(let i=0;i<100;i++){if(await evaluate('document.querySelector("#modal-content").textContent.includes("opensea")'))break;await pause(200);}
+  assert.ok(await evaluate('document.querySelector(".asset-price-detail").textContent.includes("ETH")'));
+  assert.ok(await evaluate('document.querySelector(".asset-price-detail").textContent.includes("OpenSea")'));
   assert.ok(await evaluate('document.querySelector("#modal-content").textContent.includes("opensea")'));await click('#modal-close');
   await cdp('Emulation.setDeviceMetricsOverride',{width:1440,height:1150,deviceScaleFactor:1,mobile:false});await evaluate('location.hash="overview"');await pause(200);await capture('desktop-final.png');
   assert.deepEqual(errors,[],'No uncaught browser exceptions');

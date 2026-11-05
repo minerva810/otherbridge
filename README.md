@@ -91,3 +91,8 @@ SDK 클라이언트는 `scripts/build-glyph.mjs`에서 브라우저 전용 번�
 - [Otherside](https://www.otherside.xyz/)
 
 샘플 일러스트는 내장 imagegen으로 생성했습니다. 실제 NFT 조회에서는 API가 반환한 이미지를 사용합니다. 생성 자산은 `public/assets/hero.png`, `public/assets/collectibles.png`; 프롬프트는 `image-prompts.md`에 기록했습니다.
+
+### NFT 가격 (ETH)
+자산 카드와 상세 화면은 OpenSea의 공개 ETH 판매 등록을 우선 표시합니다. 개별 ETH 판매가가 없으면 컬렉션 바닥가를 별도 표기합니다. WETH·다른 통화를 ETH로 환산하지 않습니다. 가격은 5분 캐시하며, 공급자 오류 시 최대 1시간 이내 이전 조회값에 표시를 붙입니다. 가격이 없거나 조회에 실패하면 0 ETH로 표시하지 않습니다. 상세 화면에서 출처와 조회 시각을 확인할 수 있습니다.
+
+`POST /api/v1/assets/prices`는 지원 컬렉션의 `{assets:[{contract,token_id}]}`를 최대 60개 받습니다. API 키는 서버에서만 사용합니다.
