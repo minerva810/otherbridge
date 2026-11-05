@@ -63,6 +63,9 @@ try{
   assert.equal(await evaluate('location.hash'),'#portfolio');assert.ok(await evaluate('document.querySelectorAll(".real-image").length>0'));
   for(let i=0;i<300;i++){if(await evaluate('Boolean(document.querySelector(".asset-card .asset-price-row .text-lime"))'))break;await pause(200);}
   assert.ok(await evaluate('Boolean(document.querySelector(".asset-card .asset-price-row .text-lime"))'),'Live ETH price is displayed on asset cards');
+  assert.equal(await evaluate('document.querySelector("#asset-sort").value'),'PRICE_DESC');
+  const displayedPrices=await evaluate('[...document.querySelectorAll(".asset-card .asset-price-row .text-lime")].map(el=>Number(el.textContent.replace(/ETH|,/g,"").trim()))');
+  assert.deepEqual(displayedPrices,[...displayedPrices].sort((a,b)=>b-a),'Live price responses reorder cards highest first');
   assert.ok(await evaluate('document.querySelector(".asset-card .asset-price-row").textContent.includes("ETH")'));
   await click(`[data-asset="${fixture.asset_id}"]`);for(let i=0;i<100;i++){if(await evaluate('document.querySelector("#modal-content").textContent.includes("opensea")'))break;await pause(200);}
   assert.ok(await evaluate('document.querySelector(".asset-price-detail").textContent.includes("ETH")'));

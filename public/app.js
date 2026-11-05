@@ -1,5 +1,6 @@
 import {EVM_ADDRESS, matchUtility} from './core.js';
 import {pricePresentation} from './prices.js';
+import {SORT_OPTIONS,sortAssets,acquisitionTime} from './sorting.js';
 
 const paths = {
   overview:'<rect x="3" y="3" width="7" height="7" rx="1.4"/><rect x="14" y="3" width="7" height="7" rx="1.4"/><rect x="3" y="14" width="7" height="7" rx="1.4"/><rect x="14" y="14" width="7" height="7" rx="1.4"/>',
@@ -57,7 +58,7 @@ const sampleAssets = [
 const state = {
   wallets:storage.get('wallets',[]), assets:storage.get('assets',[]), mode:storage.get('mode','live'),
   guideSteps:storage.get('guideSteps',[false,false,false]), events:storage.get('events',[]),
-  filter:'ALL',search:'',utilityFilter:'ALL',view:'grid',page:'overview',loading:false,
+  sort:storage.get('sort','PRICE_DESC'),filter:'ALL',search:'',utilityFilter:'ALL',view:'grid',page:'overview',loading:false,
   lastSynced:storage.get('lastSynced',null), apiAvailable:false, providers:null, stale:storage.get('stale',false), notice:''
 };
 let glyphModulePromise=null;
@@ -75,7 +76,7 @@ function ensureGlyph(restart=false){
 const collectionFor = id => registry.collections.find(c => c.id === id);
 const utilityFor = id => registry.utilities.find(u => u.id === id);
 const matching = (assets=state.assets) => registry.utilities.filter(u => matchUtility(u,assets).match_status !== 'NOT_MATCHED');
-const save = () => {for (const key of ['wallets','assets','mode','guideSteps','events','lastSynced','stale']) storage.set(key,state[key]);};
+const save = () => {for (const key of ['wallets','assets','mode','guideSteps','events','lastSynced','stale','sort']) storage.set(key,state[key]);};
 function event(name, data={}) {
   const entry = {event_name:name,...data,session_id:sessionId,at:new Date().toISOString()};
   state.events.push(entry);state.events=state.events.slice(-2000);storage.set('events',state.events);
@@ -111,6 +112,7 @@ function priceMarkup(asset,detail=false){
   return row+(price?'<p class="price-source">'+esc(source)+'</p>':'')+(price?.kind==='COLLECTION_FLOOR'?'<p class="price-source">컬렉션 전체의 최저 판매가입니다. 이 NFT의 개별 판매가가 아닙니다.</p>':'')+(price?.reason==='LISTING_UNVERIFIED'?'<p class="price-source">개별 판매 등록 상태를 확인하지 못해 컬렉션 바닥가를 표시합니다.</p>':'')+(p.available?'<a class="source-link" href="'+esc(price.source_url)+'" target="_blank" rel="noopener noreferrer">OpenSea에서 확인 ↗</a>':'');
 }
 function updatePriceElements(){
+  reorderAssetCards();
   $$('[data-price-asset]').forEach(el=>{const asset=state.assets.find(a=>a.id===el.dataset.priceAsset);if(asset)el.innerHTML=priceMarkup(asset,el.dataset.priceDetail==='true');});
 }
 async function loadAssetPrices(){
@@ -135,8 +137,25 @@ function assetCard(asset) {
   const c=collectionFor(asset.collection);const count=matching([asset]).length;
   return `<button class="asset-card" data-asset="${esc(asset.id)}" aria-label="${esc(c.short)} #${esc(asset.token_id)} 상세 보기"><div class="asset-image">${assetArt(asset)}<span class="card-tag">${icon(asset.asset_type==='LAND'?'globe':'layers')}${esc(c.short)}</span><span class="card-chain" title="Ethereum">⟠</span></div><div class="asset-body"><div class="asset-collection">${esc(c.name)}<span class="verified">${icon('verified')}</span></div><h3 class="asset-title">${esc(c.short)} #${esc(asset.token_id)}</h3><div data-price-asset="${esc(asset.id)}">${priceMarkup(asset)}</div><div class="card-bottom"><span>${icon('sparkles')}${count} utilities</span><span class="wallet-id">${short(asset.owner_wallet)}</span>${icon('arrow')}</div></div></button>`;
 }
+function sortControl(){return '<label class="asset-sort-control"><span>정렬</span><select id="asset-sort" aria-label="NFT 정렬 기준">'+SORT_OPTIONS.map(([value,label])=>'<option value="'+value+'" '+(state.sort===value?'selected':'')+'>'+label+'</option>').join('')+'</select></label>';}
+function sortNote(){return '<p class="asset-sort-note">'+(state.sort==='RECENT'?'지갑으로 마지막 전송된 시각 기준 · 취득 시각 미확인 '+state.assets.filter(a=>acquisitionTime(a)==null).length+'개는 뒤에 표시':'가격은 개별 판매가 우선, 없으면 컬렉션 바닥가 기준 · 가격 미확인 자산은 뒤에 표시')+'</p>';}
+function reorderAssetCards(){const grid=$('#asset-grid');if(!grid)return;const cards=new Map([...grid.querySelectorAll('[data-asset]')].map(el=>[el.dataset.asset,el]));for(const a of filteredAssets()){const card=cards.get(a.id);if(card)grid.append(card);}}
+let acquisitionUpgradePending=false;
+const acquisitionUpgradeAttempts=new Set();
+async function upgradeAcquisitionTimes(){
+  const missing=state.assets.filter(a=>!a.demo&&!Object.hasOwn(a,'acquired_at')&&!acquisitionUpgradeAttempts.has(a.id));
+  if(acquisitionUpgradePending||!missing.length||!state.wallets.length)return;
+  acquisitionUpgradePending=true;missing.forEach(a=>acquisitionUpgradeAttempts.add(a.id));
+  try{
+    const response=await fetch('/api/v1/portfolio/resolve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({wallets:state.wallets.filter(w=>!w.demo).map(w=>w.address)}),signal:AbortSignal.timeout(120000)});
+    if(!response.ok)return;const data=await response.json();
+    const found=new Map(data.assets.map(a=>[a.id+':'+a.owner_wallet,a]));
+    state.assets=state.assets.map(a=>{const fresh=found.get(a.id+':'+a.owner_wallet);return fresh?{...a,acquired_at:fresh.acquired_at??null}:a;});save();
+    if(state.sort==='RECENT'&&['overview','portfolio'].includes(state.page))render();
+  }catch{/* Unverified acquisition dates stay unknown. */}finally{acquisitionUpgradePending=false;}
+}
 function tabs() {return `<div class="collection-tabs" role="group" aria-label="컬렉션 필터">${[{id:'ALL',short:'All assets'},...registry.collections].map(c=>`<button class="tab ${state.filter===c.id?'selected':''}" data-filter="${c.id}" aria-pressed="${state.filter===c.id}">${esc(c.short)}${c.id==='ALL'?`<span class="tab-count">${state.assets.length}</span>`:''}</button>`).join('')}</div>`;}
-function filteredAssets() {return state.assets.filter(a=>(state.filter==='ALL'||a.collection===state.filter)&&(!state.search||`${collectionFor(a.collection)?.name} ${a.token_id} ${a.owner_wallet}`.toLowerCase().includes(state.search.toLowerCase())));}
+function filteredAssets() {return sortAssets(state.assets.filter(a=>(state.filter==='ALL'||a.collection===state.filter)&&(!state.search||`${collectionFor(a.collection)?.name} ${a.token_id} ${a.owner_wallet}`.toLowerCase().includes(state.search.toLowerCase()))),state.sort);}
 function assetGrid(large=false) {
   const assets=filteredAssets();
   return `<div class="asset-grid ${large?'large-grid':''} ${state.view==='list'?'list-view':''}" id="asset-grid">${assets.length?assets.map(assetCard).join(''):`<div class="empty-state">${icon('layers')}<h3>${state.assets.length?'검색 결과가 없습니다':'아직 조회된 자산이 없습니다'}</h3><p>${state.assets.length?'다른 컬렉션이나 Token ID로 검색해 보세요.':'지갑 주소를 추가하고 지원 컬렉션 자산을 조회하세요.'}</p>${state.assets.length?'<button class="btn btn-outline" data-action="reset-filter">필터 초기화</button>':'<button class="btn btn-primary" data-action="add-wallet">지갑 추가</button>'}</div>`}</div>`;
@@ -158,9 +177,9 @@ function heroWalletForm() {
   return `<form class="wallet-form wallet-search hero-wallet-search" id="hero-wallet-form" novalidate><span class="wallet-search-field">${icon('search')}<input id="hero-wallet-input" type="text" autocomplete="off" spellcheck="false" placeholder="0x로 시작하는 지갑 주소를 입력하세요" aria-label="조회할 EVM 지갑 주소" aria-describedby="hero-wallet-error" maxlength="42" value="${esc(state.heroAddress||'')}" ${state.loading?'readonly':''}></span><button class="wallet-search-submit" type="submit" ${state.loading?'disabled':''}>${state.loading?'조회 중…':'검색'} ${icon('arrow')}</button></form><div id="hero-wallet-error" class="hero-wallet-error" role="alert">${esc(state.heroError||'')}</div>`;
 }
 function overview() {
-  return `<section class="hero" aria-label="Other Bridge 소개"><div class="hero-content"><h2>Your assets.<br><span>More possibilities.</span></h2>${heroWalletForm()}</div><div class="hero-coordinate">THE BRIDGE TO YOUR NEXT WORLD ↗</div></section>${statCards()}<div class="dashboard-grid"><div><section class="compact-portfolio"><div class="section-heading"><div><h2>Your portfolio <span class="inline-count">${state.assets.length}</span></h2><p>하나의 공간에서 만나는 나의 Yuga 자산</p></div><button class="text-btn ${state.loading?'spin':''}" data-action="refresh">${icon('refresh')}${state.loading?'조회 중':'새로고침'}</button></div><div class="filter-row">${tabs()}<div class="view-switch"><button class="${state.view==='grid'?'selected':''}" data-view="grid" aria-label="그리드 보기">${icon('overview')}</button><button class="${state.view==='list'?'selected':''}" data-view="list" aria-label="목록 보기">${icon('list')}</button></div></div>${assetGrid()}<a class="all-assets-link" href="#portfolio">전체 자산 살펴보기 ${icon('arrow')}</a><p class="portfolio-note">${icon('info')}${state.mode==='demo'?'체험용 샘플 자산 · 실제 보유 정보가 아닙니다.':state.stale?'최근 캐시 · 소유 정보가 변경되었을 수 있습니다.':`마지막 조회 ${formatDate(state.lastSynced)} · 읽기 전용`}</p></section><section class="utility-preview"><div class="section-heading"><h2>Discover your utilities</h2><a class="text-btn" href="#utilities">View all ${icon('arrow')}</a></div><div class="utility-list">${[registry.utilities[0],registry.utilities[4]].map(utilityTile).join('')}</div></section></div><aside class="dashboard-aside">${recommendation()}${journeyPanel()}</aside></div><div class="info-strip"><div>${icon('shield')}<span><strong>자산은 그대로, 가능성은 더 넓게.</strong> 지갑 서명이나 거래 없이 안전하게 탐색하세요.</span></div><button class="text-btn" data-action="help">How it works ${icon('arrow')}</button></div>`;
+  return `<section class="hero" aria-label="Other Bridge 소개"><div class="hero-content"><h2>Your assets.<br><span>More possibilities.</span></h2>${heroWalletForm()}</div><div class="hero-coordinate">THE BRIDGE TO YOUR NEXT WORLD ↗</div></section>${statCards()}<div class="dashboard-grid"><div><section class="compact-portfolio"><div class="section-heading"><div><h2>Your portfolio <span class="inline-count">${state.assets.length}</span></h2><p>하나의 공간에서 만나는 나의 Yuga 자산</p></div><button class="text-btn ${state.loading?'spin':''}" data-action="refresh">${icon('refresh')}${state.loading?'조회 중':'새로고침'}</button></div><div class="filter-row">${tabs()}<div class="portfolio-controls">${sortControl()}<div class="view-switch"><button class="${state.view==='grid'?'selected':''}" data-view="grid" aria-label="그리드 보기">${icon('overview')}</button><button class="${state.view==='list'?'selected':''}" data-view="list" aria-label="목록 보기">${icon('list')}</button></div></div></div>${state.sort==='RECENT'?sortNote():''}${assetGrid()}<a class="all-assets-link" href="#portfolio">전체 자산 살펴보기 ${icon('arrow')}</a><p class="portfolio-note">${icon('info')}${state.mode==='demo'?'체험용 샘플 자산 · 실제 보유 정보가 아닙니다.':state.stale?'최근 캐시 · 소유 정보가 변경되었을 수 있습니다.':`마지막 조회 ${formatDate(state.lastSynced)} · 읽기 전용`}</p></section><section class="utility-preview"><div class="section-heading"><h2>Discover your utilities</h2><a class="text-btn" href="#utilities">View all ${icon('arrow')}</a></div><div class="utility-list">${[registry.utilities[0],registry.utilities[4]].map(utilityTile).join('')}</div></section></div><aside class="dashboard-aside">${recommendation()}${journeyPanel()}</aside></div><div class="info-strip"><div>${icon('shield')}<span><strong>자산은 그대로, 가능성은 더 넓게.</strong> 지갑 서명이나 거래 없이 안전하게 탐색하세요.</span></div><button class="text-btn" data-action="help">How it works ${icon('arrow')}</button></div>`;
 }
-function portfolioPage() {return `${pageHeading('Your assets, all together.','여러 지갑에 흩어진 자산을 모으고, 각 자산의 새로운 가능성을 발견하세요.')}${demoBar()}${statCards()}<div class="toolbar"><div class="search-field">${icon('search')}<input type="search" id="asset-search" placeholder="컬렉션, Token ID, 지갑 주소 검색" aria-label="자산 검색" value="${esc(state.search)}"></div><div style="display:flex;gap:12px;align-items:center"><button class="text-btn" data-action="refresh">${icon('refresh')}새로고침</button><div class="view-switch"><button class="${state.view==='grid'?'selected':''}" data-view="grid" aria-label="그리드 보기">${icon('overview')}</button><button class="${state.view==='list'?'selected':''}" data-view="list" aria-label="목록 보기">${icon('list')}</button></div></div></div><div class="filter-row">${tabs()}</div>${assetGrid(true)}<p class="portfolio-note">${icon('shield')}추가한 주소의 공개 보유 정보를 조회합니다. 실제 지갑 통제권은 확인하지 않습니다.</p>`;}
+function portfolioPage() {return `${pageHeading('Your assets, all together.','여러 지갑에 흩어진 자산을 모으고, 각 자산의 새로운 가능성을 발견하세요.')}${demoBar()}${statCards()}<div class="toolbar"><div class="search-field">${icon('search')}<input type="search" id="asset-search" placeholder="컬렉션, Token ID, 지갑 주소 검색" aria-label="자산 검색" value="${esc(state.search)}"></div><div style="display:flex;gap:12px;align-items:center"><button class="text-btn" data-action="refresh">${icon('refresh')}새로고침</button><div class="view-switch"><button class="${state.view==='grid'?'selected':''}" data-view="grid" aria-label="그리드 보기">${icon('overview')}</button><button class="${state.view==='list'?'selected':''}" data-view="list" aria-label="목록 보기">${icon('list')}</button></div></div></div><div class="filter-row">${tabs()}${sortControl()}</div>${state.sort==='TOKEN_ASC'?'':sortNote()}${assetGrid(true)}<p class="portfolio-note">${icon('shield')}추가한 주소의 공개 보유 정보를 조회합니다. 실제 지갑 통제권은 확인하지 않습니다.</p>`;}
 function utilityPage() {
   const utilities=registry.utilities.filter(u=>state.utilityFilter==='ALL'||state.utilityFilter==='MATCHED'&&matchUtility(u,state.assets).match_status!=='NOT_MATCHED'||u.category===state.utilityFilter||u.status===state.utilityFilter);
   return `${pageHeading('Ownership opens possibilities.','자산의 가치가 쓰임으로 이어지는 곳. 이용 조건과 상태를 확인하고 다음 행동을 선택하세요.')}${demoBar()}<div class="registry-filters">${[['ALL','All utilities'],['MATCHED','Matched to you'],['ACCESS','Access'],['GAME','Game'],['ECONOMIC','Economic'],['IP','IP & ownership'],['LIVE','Live now'],['SIMULATED','Simulated']].map(([id,label])=>`<button class="tab ${state.utilityFilter===id?'selected':''}" data-utility-filter="${id}" aria-pressed="${state.utilityFilter===id}">${label}</button>`).join('')}</div><div class="registry-grid">${utilities.length?utilities.map(u=>`<article class="registry-card"><div class="registry-top"><span class="utility-icon ${u.status==='SIMULATED'?'purple':''}">${icon(u.icon)}</span>${statusBadge(u.status)}</div><div class="eyebrow" style="font-size:8px">${esc(u.category)}</div><h3>${esc(u.title)}</h3><p>${esc(u.description)}</p><div class="registry-meta">${u.collections.map(id=>collectionFor(id).short).join(' · ')}</div><button class="btn btn-outline" data-utility="${u.id}">${esc(u.title_ko)} ${icon('arrow')}</button></article>`).join(''):'<div class="empty-state"><h3>매칭된 유틸리티가 없습니다.</h3><p>지원 컬렉션 자산이 있는 지갑을 먼저 조회하세요.</p></div>'}</div><div class="inline-message">LIVE는 확인된 현재 기능, SIMULATED는 요구사항 기반 체험 시나리오입니다. 보유 조건 일치는 최종 이용 자격을 뜻하지 않습니다. 공식 발표나 로드맵을 검증하지 못한 항목에는 ANNOUNCED·PLANNED를 부여하지 않습니다.</div>`;
@@ -193,6 +212,7 @@ function render() {
   window.dispatchEvent(new Event('otherbridge:render'));
   if(state.page==='onboarding')void ensureGlyph().catch(()=>{});
   if(state.page==='overview'||state.page==='portfolio')void loadAssetPrices();
+  if(state.sort==='RECENT'&&(state.page==='overview'||state.page==='portfolio'))void upgradeAcquisitionTimes();
 }
 function bindContent(root=$('#main-content')) {
   $$('[data-action]',root).forEach(el=>el.addEventListener('click',()=>handleAction(el.dataset.action)));
@@ -207,6 +227,7 @@ function bindContent(root=$('#main-content')) {
   $$('[data-fallback]',root).forEach(el=>el.addEventListener('error',()=>{el.replaceWith(Object.assign(document.createElement('div'),{className:'image-placeholder',textContent:'Image unavailable'}));}));
   const form=$('#wallet-form',root);if(form)form.addEventListener('submit',addWallet);
   const heroForm=$('#hero-wallet-form',root);if(heroForm){heroForm.addEventListener('submit',searchHeroWallet);$('input',heroForm).addEventListener('input',e=>{state.heroAddress=e.target.value;state.heroError='';$('#hero-wallet-error').textContent='';e.target.removeAttribute('aria-invalid');});}
+  const sort=$('#asset-sort',root);if(sort)sort.addEventListener('change',e=>{state.sort=e.target.value;save();render();});
   const search=$('#asset-search',root);if(search)search.addEventListener('input',e=>{state.search=e.target.value;const grid=$('#asset-grid');const temp=document.createElement('div');temp.innerHTML=assetGrid(true);grid.replaceWith(temp.firstElementChild);bindContent($('#asset-grid'));});
 }
 function modal(content,eyebrow='OTHER BRIDGE') {$('#modal-content').innerHTML=content;$('#modal-eyebrow').textContent=eyebrow;hydrateIcons($('#modal'));bindContent($('#modal-content'));if(!$('#modal').open)$('#modal').showModal();$('#modal-content').scrollTop=0;}

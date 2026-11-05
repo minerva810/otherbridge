@@ -30,7 +30,7 @@ test('OpenSea fills missing metadata while a metadata outage preserves ownership
 });
 test('fresh cache avoids upstream requests, force refresh bypasses cache, stale fallback retains original sync time',async()=>{
   const cache=memoryCache();let now=Date.now();let calls=0;let fail=false;
-  const service=createNftService({collections:registry.collections,cache,alchemyKey:'key',now:()=>now,fetcher:async()=>{calls++;return fail?response({},503):response({ownedNfts:[nft()]});}});
+  const service=createNftService({collections:registry.collections,cache,alchemyKey:'key',now:()=>now,fetcher:async()=>{calls++;return fail?response({},503):response({ownedNfts:[{...nft(),acquiredAt:{blockTimestamp:'2025-01-01T00:00:00Z'}}]});}});
   const first=await service.wallet(owner);await service.wallet(owner);assert.equal(calls,1);await service.wallet(owner,{force:true});assert.equal(calls,2);fail=true;now+=11*60*1000;
   const stale=await service.wallet(owner);assert.equal(stale.stale,true);assert.equal(stale.last_synced_at,first.last_synced_at);
   now+=25*60*60*1000;await assert.rejects(()=>service.wallet(owner),/Alchemy/);
