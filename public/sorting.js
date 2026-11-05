@@ -1,4 +1,4 @@
-import {isCurrentBuyNow} from './prices.js';
+import {isCurrentPrice} from './prices.js';
 export const SORT_OPTIONS=[['PRICE_DESC','가격순 · 높은 가격'],['RECENT','최근 취득순'],['TOKEN_ASC','토큰 번호순 · 낮은 번호']];
 function tokenNumber(asset){try{return BigInt(asset.token_id);}catch{return null;}}
 function compareKnown(a,b,descending=false){
@@ -7,7 +7,7 @@ function compareKnown(a,b,descending=false){
 }
 function priceUnits(asset,now){
   const p=asset.market_price;
-  if(!isCurrentBuyNow(p,now))return null;
+  if(!isCurrentPrice(p,now))return null;
   let value=String(p.value_eth);
   if(/e/i.test(value)){const n=Number(value);if(!Number.isFinite(n)||n<0)return null;value=n.toLocaleString('en-US',{useGrouping:false,maximumFractionDigits:18});}
   const match=/^(\d+)(?:\.(\d{1,18}))?$/.exec(value);if(!match)return null;

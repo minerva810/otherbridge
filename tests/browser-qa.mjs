@@ -62,13 +62,13 @@ try{
   for(let i=0;i<150;i++){if(await evaluate('location.hash==="#portfolio"'))break;await pause(200);}
   assert.equal(await evaluate('location.hash'),'#portfolio');assert.ok(await evaluate('document.querySelectorAll(".real-image").length>0'));
   for(let i=0;i<300;i++){if(await evaluate('document.querySelectorAll(".asset-card .asset-price-row").length>0&&![...document.querySelectorAll(".asset-card .asset-price-row")].some(el=>el.textContent.includes("조회 중"))'))break;await pause(200);}
-  assert.ok(await evaluate('[...document.querySelectorAll(".asset-card .asset-price-row")].every(el=>el.textContent.includes("Buy now"))'),'Live Buy now status is displayed on asset cards');
+  assert.ok(await evaluate('[...document.querySelectorAll(".asset-card .asset-price-row")].every(el=>!el.textContent.includes("Buy now")&&el.querySelector("strong"))'),'Asset prices are shown without Buy now labels');
   assert.equal(await evaluate('document.querySelector("#asset-sort").value'),'PRICE_DESC');
   const displayedPrices=await evaluate('[...document.querySelectorAll(".asset-card .asset-price-row .text-lime")].map(el=>Number(el.textContent.replace(/ETH|,/g,"").trim()))');
   assert.deepEqual(displayedPrices,[...displayedPrices].sort((a,b)=>b-a),'Live price responses reorder cards highest first');
   assert.ok(await evaluate('!document.querySelector("#asset-grid").textContent.includes("컬렉션 바닥가")'));
   await click(`[data-asset="${fixture.asset_id}"]`);for(let i=0;i<100;i++){if(await evaluate('document.querySelector("#modal-content").textContent.includes("opensea")'))break;await pause(200);}
-  assert.ok(await evaluate('document.querySelector(".asset-price-detail").textContent.includes("Buy now")'));
+  assert.ok(await evaluate('!document.querySelector(".asset-price-detail").textContent.includes("Buy now")'));
   assert.ok(await evaluate('document.querySelector(".asset-price-detail").textContent.includes("OpenSea")'));
   assert.ok(await evaluate('document.querySelector("#modal-content").textContent.includes("opensea")'));await click('#modal-close');
   await cdp('Emulation.setDeviceMetricsOverride',{width:1440,height:1150,deviceScaleFactor:1,mobile:false});await evaluate('location.hash="overview"');await pause(200);await capture('desktop-final.png');

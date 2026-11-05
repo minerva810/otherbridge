@@ -15,3 +15,5 @@
 .portfolio-controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.filter-row{flex-wrap:wrap;gap:12px}.asset-sort-control{display:inline-flex;align-items:center;gap:8px;font-size:11px;color:#929783;flex-shrink:0}.asset-sort-control select{font:inherit;font-size:12px;color:#e6e9df;background:#1c2116;border:1px solid #363e2c;border-radius:7px;padding:9px 28px 9px 10px;cursor:pointer;max-width:100%}.asset-sort-control select:focus-visible{outline:2px solid #d5f88d;outline-offset:2px}.asset-sort-note{font-size:11px;line-height:1.6;color:#929783;margin:0 0 14px}@media(max-width:640px){.portfolio-controls{width:100%;justify-content:space-between}.asset-sort-control select{font-size:11px}}
 
 .asset-price-row strong{white-space:normal;overflow-wrap:anywhere;text-align:right;min-width:0;max-width:76%}.asset-price-row>span{flex-shrink:0}.asset-price-detail .asset-price-row strong{max-width:80%}
+
+.asset-price-row{justify-content:flex-end}.asset-price-row strong,.asset-price-detail .asset-price-row strong{max-width:100%}.list-view .asset-price-row{justify-content:flex-start}

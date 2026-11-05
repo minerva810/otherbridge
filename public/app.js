@@ -103,20 +103,20 @@ const pricePending=new Set();
 const priceAttempts=new Map();
 function assetOpenSeaUrl(asset){return 'https://opensea.io/item/ethereum/'+encodeURIComponent(asset.contract||collectionFor(asset.collection).contract)+'/'+encodeURIComponent(asset.token_id);}
 function priceMarkup(asset,detail=false){
-  if(asset.demo)return '<div class="asset-price-row"><span>가격</span><span>샘플 · 가격 미제공</span></div>';
-  const price=asset.market_price?.quote_schema===2?asset.market_price:null;const p=pricePresentation(price,!price||pricePending.has(asset.id));
+  if(asset.demo)return '<div class="asset-price-row"><span>샘플 · 가격 미제공</span></div>';
+  const price=asset.market_price?.quote_schema===3?asset.market_price:null;const p=pricePresentation(price,!price||pricePending.has(asset.id));
   const time=price?.quoted_at?formatDate(price.quoted_at):'';
   const source=price?'OpenSea · '+time:'';
-  const row='<div class="asset-price-row" title="'+esc(source)+'"><span>'+esc(p.label)+'</span><strong class="'+(p.available?'text-lime':'price-muted')+'">'+esc(p.amount)+'</strong></div>';
+  const row='<div class="asset-price-row" title="'+esc(source)+'"><strong class="'+(p.available?'text-lime':'price-muted')+'">'+esc(p.amount)+'</strong></div>';
   if(!detail)return row;
-  return row+(price?'<p class="price-source">'+esc(source)+'</p>':'')+(!asset.demo?'<a class="source-link" href="'+esc(assetOpenSeaUrl(asset))+'" target="_blank" rel="noopener noreferrer">OpenSea에서 확인 ↗</a>':'');
+  return row+(price?'<p class="price-source">'+esc(source)+'</p>':'')+(price?.kind==='PORTFOLIO_VALUE'?'<p class="price-source">Portfolio 추정 가치 · 컬렉션 최고 구매 제안 기준'+(price.original_currency==='WETH'?' (WETH를 ETH와 1:1로 표시)':'')+'</p>':'')+(!asset.demo?'<a class="source-link" href="'+esc(assetOpenSeaUrl(asset))+'" target="_blank" rel="noopener noreferrer">OpenSea에서 확인 ↗</a>':'');
 }
 function updatePriceElements(){
   reorderAssetCards();
   $$('[data-price-asset]').forEach(el=>{const asset=state.assets.find(a=>a.id===el.dataset.priceAsset);if(asset)el.innerHTML=priceMarkup(asset,el.dataset.priceDetail==='true');});
 }
 async function loadAssetPrices(){
-  const now=Date.now();const assets=state.assets.filter(a=>!a.demo&&a.contract&&!pricePending.has(a.id)&&now-(priceAttempts.get(a.id)||0)>10000&&(!a.market_price||a.market_price.quote_schema!==2||a.market_price.stale||now-Date.parse(a.market_price.quoted_at)>=(a.market_price.kind==='UNAVAILABLE'?10000:PRICE_REFRESH_MS)||a.market_price.expires_at&&Date.parse(a.market_price.expires_at)<=now));
+  const now=Date.now();const assets=state.assets.filter(a=>!a.demo&&a.contract&&!pricePending.has(a.id)&&now-(priceAttempts.get(a.id)||0)>10000&&(!a.market_price||a.market_price.quote_schema!==3||a.market_price.stale||now-Date.parse(a.market_price.quoted_at)>=(a.market_price.kind==='UNAVAILABLE'?10000:PRICE_REFRESH_MS)||a.market_price.expires_at&&Date.parse(a.market_price.expires_at)<=now));
   for(const a of assets){pricePending.add(a.id);priceAttempts.set(a.id,now);}
   if(!assets.length)return;updatePriceElements();
   for(let i=0;i<assets.length;i+=12){
@@ -128,7 +128,7 @@ async function loadAssetPrices(){
       state.assets=state.assets.map(a=>quotes.has(a.id)?{...a,market_price:quotes.get(a.id)}:a);
     }catch{
       const ids=new Set(batch.map(a=>a.id));
-      state.assets=state.assets.map(a=>ids.has(a.id)?{...a,market_price:{quote_schema:2,kind:'UNAVAILABLE',currency:'ETH',value_eth:null,quoted_at:new Date().toISOString(),reason:'PROVIDER_UNAVAILABLE'}}:a);
+      state.assets=state.assets.map(a=>ids.has(a.id)?{...a,market_price:{quote_schema:3,kind:'UNAVAILABLE',currency:'ETH',value_eth:null,quoted_at:new Date().toISOString(),reason:'PROVIDER_UNAVAILABLE'}}:a);
     }finally{for(const a of batch)pricePending.delete(a.id);save();updatePriceElements();}
   }
 }
@@ -138,7 +138,7 @@ function assetCard(asset) {
   return `<button class="asset-card" data-asset="${esc(asset.id)}" aria-label="${esc(c.short)} #${esc(asset.token_id)} 상세 보기"><div class="asset-image">${assetArt(asset)}<span class="card-tag">${icon(asset.asset_type==='LAND'?'globe':'layers')}${esc(c.short)}</span><span class="card-chain" title="Ethereum">⟠</span></div><div class="asset-body"><div class="asset-collection">${esc(c.name)}<span class="verified">${icon('verified')}</span></div><h3 class="asset-title">${esc(c.short)} #${esc(asset.token_id)}</h3><div data-price-asset="${esc(asset.id)}">${priceMarkup(asset)}</div><div class="card-bottom"><span>${icon('sparkles')}${count} utilities</span><span class="wallet-id">${short(asset.owner_wallet)}</span>${icon('arrow')}</div></div></button>`;
 }
 function sortControl(){return '<label class="asset-sort-control"><span>정렬</span><select id="asset-sort" aria-label="NFT 정렬 기준">'+SORT_OPTIONS.map(([value,label])=>'<option value="'+value+'" '+(state.sort===value?'selected':'')+'>'+label+'</option>').join('')+'</select></label>';}
-function sortNote(){return '<p class="asset-sort-note">'+(state.sort==='RECENT'?'지갑으로 마지막 전송된 시각 기준 · 취득 시각 미확인 '+state.assets.filter(a=>acquisitionTime(a)==null).length+'개는 뒤에 표시':'OpenSea Buy now · ETH 판매가 기준 · 판매 미등록·가격 미확인 자산은 뒤에 표시')+'</p>';}
+function sortNote(){return '<p class="asset-sort-note">'+(state.sort==='RECENT'?'지갑으로 마지막 전송된 시각 기준 · 취득 시각 미확인 '+state.assets.filter(a=>acquisitionTime(a)==null).length+'개는 뒤에 표시':'OpenSea 판매가 · 미등록 자산은 Portfolio 평가액 기준 · 가격 미확인 자산은 뒤에 표시')+'</p>';}
 function reorderAssetCards(){const grid=$('#asset-grid');if(!grid)return;const cards=new Map([...grid.querySelectorAll('[data-asset]')].map(el=>[el.dataset.asset,el]));for(const a of filteredAssets()){const card=cards.get(a.id);if(card)grid.append(card);}}
 let acquisitionUpgradePending=false;
 const acquisitionUpgradeAttempts=new Set();

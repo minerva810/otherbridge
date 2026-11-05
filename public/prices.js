@@ -4,15 +4,15 @@ export function formatEth(value){
   const [whole,fraction='']=value.split('.');const digits=fraction.replace(/0+$/,'');
   return BigInt(whole).toLocaleString('en-US')+(digits?'.'+digits:'');
 }
-export function isCurrentBuyNow(price,now=Date.now()){
+export function isCurrentPrice(price,now=Date.now()){
   const age=now-Date.parse(price?.quoted_at);
-  return price?.quote_schema===2&&price.kind==='LISTING'&&price.currency==='ETH'&&!price.stale&&formatEth(price.value_eth)!==null&&age>=0&&age<PRICE_REFRESH_MS&&(!price.expires_at||Date.parse(price.expires_at)>now);
+  return price?.quote_schema===3&&['LISTING','PORTFOLIO_VALUE'].includes(price.kind)&&price.currency==='ETH'&&!price.stale&&formatEth(price.value_eth)!==null&&age>=0&&age<PRICE_REFRESH_MS&&(!price.expires_at||Date.parse(price.expires_at)>now);
 }
 export function pricePresentation(price,loading=false,now=Date.now()){
-  if(!price||price.quote_schema!==2)return {label:'Buy now',amount:loading?'조회 중…':'—',available:false};
-  if(isCurrentBuyNow(price,now))return {label:'Buy now',amount:formatEth(price.value_eth)+' ETH',available:true};
-  if(loading)return {label:'Buy now',amount:'조회 중…',available:false};
-  if(price.kind==='NOT_LISTED')return {label:'Buy now',amount:'판매 등록 없음',available:false};
-  if(price.kind==='NON_ETH_LISTING')return {label:'Buy now',amount:'ETH 판매가 없음',available:false};
-  return {label:'Buy now',amount:'가격 확인 불가',available:false};
+  if(!price||price.quote_schema!==3)return {amount:loading?'조회 중…':'—',available:false};
+  if(isCurrentPrice(price,now))return {amount:formatEth(price.value_eth)+' ETH',available:true};
+  if(loading)return {amount:'조회 중…',available:false};
+  if(price.kind==='NO_PORTFOLIO_VALUE')return {amount:'평가 정보 없음',available:false};
+  if(price.kind==='NON_ETH_LISTING')return {amount:'ETH 판매가 없음',available:false};
+  return {amount:'가격 확인 불가',available:false};
 }

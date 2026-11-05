@@ -4,7 +4,7 @@ import {sortAssets} from '../public/sorting.js';
 import {normalizeNft} from '../public/core.js';
 import {alchemyOwnership,fillAcquisitionTimes} from '../lib/nft-providers.js';
 const now=Date.now();
-const asset=(id,value,date)=>({id,token_id:id,acquired_at:date,market_price:value==null?null:{quote_schema:2,kind:'LISTING',currency:'ETH',value_eth:value,quoted_at:new Date(now).toISOString()}});
+const asset=(id,value,date)=>({id,token_id:id,acquired_at:date,market_price:value==null?null:{quote_schema:3,kind:'LISTING',currency:'ETH',value_eth:value,quoted_at:new Date(now).toISOString()}});
 test('default sorts exact ETH prices descending, keeps unknown last, and does not mutate source',()=>{
   const input=[asset('10',null),asset('3','1.000000000000000001'),asset('2','1.000000000000000002'),asset('1','0.5')];
   assert.deepEqual(sortAssets(input,undefined,now).map(a=>a.id),['2','3','1','10']);
@@ -19,10 +19,11 @@ test('recent acquisition sorts across wallets; sync times cannot masquerade as a
 test('token IDs use numeric ascending order even beyond safe integer range',()=>{
   assert.deepEqual(sortAssets(['10000000000000000001','10','2','10000000000000000000'].map(id=>asset(id,null)),'TOKEN_ASC').map(a=>a.id),['2','10','10000000000000000000','10000000000000000001']);
 });
-test('only current ETH Buy now listings participate in price sorting',()=>{
+test('current ETH listings and Portfolio values share descending price order; old floors stay unknown',()=>{
   const floor=asset('2','0.3');floor.market_price.kind='COLLECTION_FLOOR';
   const wrong=asset('1','99');wrong.market_price.currency='WETH';
-  assert.deepEqual(sortAssets([wrong,floor,asset('3','0.2')]).map(a=>a.id),['3','1','2']);
+  const portfolio=asset('4','0.5');portfolio.market_price.kind='PORTFOLIO_VALUE';
+  assert.deepEqual(sortAssets([wrong,floor,asset('3','0.2'),portfolio]).map(a=>a.id),['4','3','1','2']);
 });
 test('Alchemy requests transferTime and normalizes actual acquisition timestamp only',async()=>{
   const contract='0x'+'1'.repeat(40),owner='0x'+'2'.repeat(40);const collections=[{contract,id:'TEST',type:'LAND'}];
