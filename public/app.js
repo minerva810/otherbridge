@@ -251,7 +251,9 @@ function handleAction(action) {
 window.addEventListener('otherbridge:glyph-status',e=>{
   state.glyph=e.detail;if(e.detail.ready){state.glyphLoadError='';clearTimeout(glyphLoadingTimer);}
   const caption=$('#profile-button small');if(caption)caption.textContent=e.detail.signedIn?'Glyph authenticated':'Guest session';
-  render();
+  // Glyph owns the onboarding portal; status updates must not replace its host.
+  if(state.page==='overview')render();
+  else if(state.page==='onboarding'&&e.detail.error&&!$('#glyph-onboarding-slot .glyph-onboarding')){state.glyphLoadError=e.detail.error;render();}
 });
 window.addEventListener('otherbridge:glyph-event',e=>{const {event:name,...detail}=e.detail;event(name,detail);});
 window.addEventListener('otherbridge:glyph-import',async e=>{
