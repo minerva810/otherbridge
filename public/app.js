@@ -1,5 +1,5 @@
 import {EVM_ADDRESS, matchUtility} from './core.js';
-import {pricePresentation} from './prices.js';
+import {pricePresentation,PRICE_REFRESH_MS} from './prices.js';
 import {SORT_OPTIONS,sortAssets,acquisitionTime} from './sorting.js';
 
 const paths = {
@@ -104,20 +104,19 @@ const priceAttempts=new Map();
 function assetOpenSeaUrl(asset){return 'https://opensea.io/item/ethereum/'+encodeURIComponent(asset.contract||collectionFor(asset.collection).contract)+'/'+encodeURIComponent(asset.token_id);}
 function priceMarkup(asset,detail=false){
   if(asset.demo)return '<div class="asset-price-row"><span>가격</span><span>샘플 · 가격 미제공</span></div>';
-  const cached=asset.market_price;const price=cached&&Date.now()-Date.parse(cached.quoted_at)>3600000?null:cached;const p=pricePresentation(price,!cached||pricePending.has(asset.id));
+  const price=asset.market_price?.quote_schema===2?asset.market_price:null;const p=pricePresentation(price,!price||pricePending.has(asset.id));
   const time=price?.quoted_at?formatDate(price.quoted_at):'';
-  const old=price?.stale||price?.quoted_at&&Date.now()-Date.parse(price.quoted_at)>300000;
-  const source=price?'OpenSea · '+time+(old?' · 이전 조회값':''):'';
-  const row='<div class="asset-price-row" title="'+esc(source)+'"><span>'+esc(p.label)+(old&&p.available?' · 이전값':'')+'</span><strong class="'+(p.available?'text-lime':'price-muted')+'">'+esc(p.amount)+'</strong></div>';
+  const source=price?'OpenSea · '+time:'';
+  const row='<div class="asset-price-row" title="'+esc(source)+'"><span>'+esc(p.label)+'</span><strong class="'+(p.available?'text-lime':'price-muted')+'">'+esc(p.amount)+'</strong></div>';
   if(!detail)return row;
-  return row+(price?'<p class="price-source">'+esc(source)+'</p>':'')+(price?.kind==='COLLECTION_FLOOR'?'<p class="price-source">컬렉션 전체의 최저 판매가입니다. 이 NFT의 개별 판매가가 아닙니다.</p>':'')+(price?.reason==='LISTING_UNVERIFIED'?'<p class="price-source">개별 판매 등록 상태를 확인하지 못해 컬렉션 바닥가를 표시합니다.</p>':'')+(!asset.demo?'<a class="source-link" href="'+esc(assetOpenSeaUrl(asset))+'" target="_blank" rel="noopener noreferrer">OpenSea에서 확인 ↗</a>':'');
+  return row+(price?'<p class="price-source">'+esc(source)+'</p>':'')+(!asset.demo?'<a class="source-link" href="'+esc(assetOpenSeaUrl(asset))+'" target="_blank" rel="noopener noreferrer">OpenSea에서 확인 ↗</a>':'');
 }
 function updatePriceElements(){
   reorderAssetCards();
   $$('[data-price-asset]').forEach(el=>{const asset=state.assets.find(a=>a.id===el.dataset.priceAsset);if(asset)el.innerHTML=priceMarkup(asset,el.dataset.priceDetail==='true');});
 }
 async function loadAssetPrices(){
-  const now=Date.now();const assets=state.assets.filter(a=>!a.demo&&a.contract&&!pricePending.has(a.id)&&now-(priceAttempts.get(a.id)||0)>30000&&(!a.market_price||a.market_price.stale||now-Date.parse(a.market_price.quoted_at)>(a.market_price.kind==='UNAVAILABLE'?30000:300000)));
+  const now=Date.now();const assets=state.assets.filter(a=>!a.demo&&a.contract&&!pricePending.has(a.id)&&now-(priceAttempts.get(a.id)||0)>10000&&(!a.market_price||a.market_price.quote_schema!==2||a.market_price.stale||now-Date.parse(a.market_price.quoted_at)>=(a.market_price.kind==='UNAVAILABLE'?10000:PRICE_REFRESH_MS)||a.market_price.expires_at&&Date.parse(a.market_price.expires_at)<=now));
   for(const a of assets){pricePending.add(a.id);priceAttempts.set(a.id,now);}
   if(!assets.length)return;updatePriceElements();
   for(let i=0;i<assets.length;i+=12){
@@ -129,7 +128,7 @@ async function loadAssetPrices(){
       state.assets=state.assets.map(a=>quotes.has(a.id)?{...a,market_price:quotes.get(a.id)}:a);
     }catch{
       const ids=new Set(batch.map(a=>a.id));
-      state.assets=state.assets.map(a=>ids.has(a.id)?{...a,market_price:a.market_price?.value_eth!=null&&Date.now()-Date.parse(a.market_price.quoted_at)<3600000?{...a.market_price,stale:true}:{kind:'UNAVAILABLE',quoted_at:new Date().toISOString(),reason:'PROVIDER_UNAVAILABLE'}}:a);
+      state.assets=state.assets.map(a=>ids.has(a.id)?{...a,market_price:{quote_schema:2,kind:'UNAVAILABLE',currency:'ETH',value_eth:null,quoted_at:new Date().toISOString(),reason:'PROVIDER_UNAVAILABLE'}}:a);
     }finally{for(const a of batch)pricePending.delete(a.id);save();updatePriceElements();}
   }
 }
@@ -139,7 +138,7 @@ function assetCard(asset) {
   return `<button class="asset-card" data-asset="${esc(asset.id)}" aria-label="${esc(c.short)} #${esc(asset.token_id)} 상세 보기"><div class="asset-image">${assetArt(asset)}<span class="card-tag">${icon(asset.asset_type==='LAND'?'globe':'layers')}${esc(c.short)}</span><span class="card-chain" title="Ethereum">⟠</span></div><div class="asset-body"><div class="asset-collection">${esc(c.name)}<span class="verified">${icon('verified')}</span></div><h3 class="asset-title">${esc(c.short)} #${esc(asset.token_id)}</h3><div data-price-asset="${esc(asset.id)}">${priceMarkup(asset)}</div><div class="card-bottom"><span>${icon('sparkles')}${count} utilities</span><span class="wallet-id">${short(asset.owner_wallet)}</span>${icon('arrow')}</div></div></button>`;
 }
 function sortControl(){return '<label class="asset-sort-control"><span>정렬</span><select id="asset-sort" aria-label="NFT 정렬 기준">'+SORT_OPTIONS.map(([value,label])=>'<option value="'+value+'" '+(state.sort===value?'selected':'')+'>'+label+'</option>').join('')+'</select></label>';}
-function sortNote(){return '<p class="asset-sort-note">'+(state.sort==='RECENT'?'지갑으로 마지막 전송된 시각 기준 · 취득 시각 미확인 '+state.assets.filter(a=>acquisitionTime(a)==null).length+'개는 뒤에 표시':'가격은 개별 판매가 우선, 없으면 컬렉션 바닥가 기준 · 가격 미확인 자산은 뒤에 표시')+'</p>';}
+function sortNote(){return '<p class="asset-sort-note">'+(state.sort==='RECENT'?'지갑으로 마지막 전송된 시각 기준 · 취득 시각 미확인 '+state.assets.filter(a=>acquisitionTime(a)==null).length+'개는 뒤에 표시':'OpenSea Buy now · ETH 판매가 기준 · 판매 미등록·가격 미확인 자산은 뒤에 표시')+'</p>';}
 function reorderAssetCards(){const grid=$('#asset-grid');if(!grid)return;const cards=new Map([...grid.querySelectorAll('[data-asset]')].map(el=>[el.dataset.asset,el]));for(const a of filteredAssets()){const card=cards.get(a.id);if(card)grid.append(card);}}
 let acquisitionUpgradePending=false;
 const acquisitionUpgradeAttempts=new Set();
@@ -336,5 +335,6 @@ $('#menu-button').addEventListener('click',()=>$('#sidebar').classList.toggle('o
 document.addEventListener('click',e=>{if(window.innerWidth<=700&&!e.target.closest('#sidebar')&&!e.target.closest('#menu-button'))$('#sidebar').classList.remove('open');});
 window.addEventListener('hashchange',()=>{render();$('#sidebar').classList.remove('open');window.scrollTo({top:0});});
 render();
+setInterval(()=>{if(!document.hidden&&(state.page==='overview'||state.page==='portfolio'||$('#modal').open&&$('#modal .modal-asset-header'))){updatePriceElements();void loadAssetPrices();}},15000);
 fetch('/api/v1/health',{signal:AbortSignal.timeout(10000)}).then(r=>r.ok?r.json():null).then(data=>{state.apiAvailable=data?.service==='other-bridge';state.providers=data?.providers||null;if(state.page==='wallets')render();}).catch(()=>{});
 if(!state.events.some(e=>e.event_name==='portfolio_loaded'))event('portfolio_loaded',{mode:state.mode});
