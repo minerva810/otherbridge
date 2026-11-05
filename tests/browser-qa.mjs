@@ -36,7 +36,7 @@ try{
   await click('#modal [data-utility="koda-play"]');assert.ok((await evaluate('document.querySelector("#modal-content").textContent')).includes('SIMULATED'));
   await click('#modal-close');await evaluate('location.hash="utilities"');await pause(100);
   await click('[data-utility-filter="LIVE"]');assert.equal(await evaluate('document.querySelectorAll(".registry-card").length'),1);
-  await evaluate('location.hash="overview"');await pause(100);assert.equal(await evaluate('document.querySelector(".hero [data-action=\\"start-guide\\"]")'),null);await click('.recommendation-panel [data-action="start-guide"]');assert.equal(await evaluate('location.hash'),'#onboarding');
+  await evaluate('location.hash="overview"');await pause(100);assert.equal(await evaluate('document.querySelector(".hero [data-action=\\"start-guide\\"]")'),null);assert.equal(await evaluate('document.querySelectorAll(".dashboard-aside,.recommendation-panel,.journey-panel").length'),0);assert.ok(await evaluate('Math.abs(document.querySelector(".dashboard-grid>div").getBoundingClientRect().width-document.querySelector(".dashboard-grid").getBoundingClientRect().width)<1'));await click('[data-nav="onboarding"]');assert.equal(await evaluate('location.hash'),'#onboarding');
   for(let i=0;i<150;i++){if(await evaluate('Boolean(document.querySelector(".glyph-login-card"))'))break;await pause(200);}
   assert.ok(await evaluate('Boolean(document.querySelector(".glyph-login-card"))'));
   assert.equal(await evaluate('document.querySelectorAll("[data-complete-step]").length'),0);
