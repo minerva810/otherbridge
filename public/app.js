@@ -73,7 +73,7 @@ if (!sessionId) {sessionId=crypto.randomUUID();storage.set('session',sessionId);
 function hydrateIcons(root=document) {$$("[data-icon]",root).forEach(el => {el.innerHTML=icon(el.dataset.icon);});}
 function statusBadge(status) {return `<span class="status ${status.toLowerCase()}">${status==='SIMULATED'?'SIMULATED':status==='UNAVAILABLE'?'UNAVAILABLE':status}</span>`;}
 function toast(message,error=false) {const el=document.createElement('div');el.className='toast'+(error?' error':'');el.textContent=message;$('#toasts').append(el);setTimeout(()=>el.remove(),5000);}
-function pageHeading(title,subtitle,action=true) {return `<div class="page-heading"><div><h1>${title}</h1><p>${subtitle}</p></div>${action?`<div class="heading-actions"><span class="mode-label">${icon('shield')}Read-only mode</span><button class="btn btn-primary" data-action="add-wallet">${icon('plus')}지갑 추가</button></div>`:''}</div>`;}
+function pageHeading(title,subtitle,action=true) {return `<div class="page-heading"><div><h1>${title}</h1><p>${subtitle}</p></div>${action?`<div class="heading-actions"><span class="mode-label">${icon('shield')}Read-only mode</span></div>`:''}</div>`;}
 function demoBar() {return state.mode==='demo'?`<div class="demo-bar"><span>${icon('info')} 샘플 포트폴리오 · NFT 이미지와 보유 정보는 체험용입니다.</span><a class="text-btn" href="#wallets">내 지갑 조회 ${icon('arrow')}</a></div>`:'';}
 function statCards() {
   const countCollections=new Set(state.assets.map(a=>a.collection)).size;
