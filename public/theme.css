@@ -1,0 +1,87 @@
+/* Other Bridge — dark neutral surfaces with violet and pink accents. */
+body{background:var(--bg);color:var(--text)}
+::selection{background:#8655E866;color:var(--text)}
+.sidebar,.topbar{background:var(--bg)}
+.sidebar{border-right-color:var(--border)}
+.brand-mark i{background:var(--primary)}
+.brand-mark:after{background:var(--bg)}
+.nav-item{color:var(--muted)}
+.nav-item:hover{background:var(--surface);color:var(--text)}
+.nav-item.active{background:#8655E81F;color:#D4BFFC;box-shadow:inset 2px 0 0 var(--primary)}
+.nav-count{color:var(--muted);border-color:var(--border)}
+.nav-item.active .nav-count{border-color:#8655E861;color:#D4BFFC}
+.nav-new{background:#D874C71A;color:var(--secondary)}
+.nav-small-dot,.notification-dot{background:var(--secondary)}
+.nav-label,.sidebar-status,.stat-foot,footer,footer button{color:var(--muted)}
+.brand-dot{color:var(--secondary)}
+.explore-card{background:var(--surface);border-color:var(--border)}
+.explore-card .orbit-icon{color:var(--secondary)}
+.explore-card a{border-color:var(--border);color:var(--accent)}
+.profile-avatar,.top-avatar{background:#282031;color:#E9D7EF;border-color:#D874C726}
+.live-dot{background:var(--secondary);box-shadow:0 0 7px #D874C726}
+.btn-primary,.glyph-login-button{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn-primary:hover,.glyph-login-button:hover{background:var(--primary-hover);border-color:var(--primary-hover);box-shadow:0 5px 22px #8655E82B}
+.btn-outline,.btn-subtle,.glyph-signup-button{background:var(--surface);border-color:var(--border);color:var(--text)}
+.btn-outline:hover,.btn-subtle:hover,.glyph-signup-button:hover{background:var(--surface-2);border-color:var(--primary)}
+.hero{min-height:300px;background:var(--surface);border-color:var(--border)}
+.hero::before{background-image:linear-gradient(90deg,#0B0A12F0 0%,#0B0A12D6 25%,#0B0A126B 53%,#0B0A1214 100%),url('/assets/hero-game.jpeg');background-position:center,78% 26%;background-size:cover;opacity:1}
+.hero .hero-content{padding:36px;position:relative}
+.hero h2{color:var(--text);font-size:clamp(32px,3vw,43px);text-shadow:0 2px 22px #0B0A12B3}
+.hero h2 span{color:#D8B8FA}
+.hero-coordinate{color:#ECE3F5;text-shadow:0 1px 8px var(--bg)}
+.hero-coordinate:before{background:var(--secondary)}
+/* Keep the wide white wallet field while giving its action the new palette. */
+.wallet-form.wallet-search{background:#F4F1F8;border-color:#F4F1F8;color-scheme:light}
+.wallet-search-field{color:#7B708E}
+.wallet-form.wallet-search input{color:#30263F}
+.wallet-search input::placeholder{color:#756B83}
+.hero .wallet-form.wallet-search{width:min(100%,850px);border-color:#F4F1F8;box-shadow:0 12px 32px #0B0A124D}
+.wallet-search .wallet-search-submit,.hero .wallet-search .wallet-search-submit{background:var(--primary);color:#fff}
+.wallet-search .wallet-search-submit:hover,.hero .wallet-search .wallet-search-submit:hover{background:var(--primary-hover)}
+.wallet-search:focus-within,.hero .wallet-search:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px #8655E847,0 12px 32px #0B0A124D}
+.wallet-search-submit:focus-visible{outline-color:var(--text)}
+.stat,.asset-card,.registry-card,.utility-tile,.wallet-panel,.glyph-wallet-card,.glyph-login-card,.funnel,.guide-step-card{background:var(--surface);border-color:var(--border)}
+.stat-label{color:var(--muted)}
+.stat-label svg{color:var(--muted)}
+.stat-number{color:var(--text)}
+.stat-lime .stat-number,.total-value-amount{color:var(--accent)}
+.asset-card:hover,.registry-card:hover,.utility-tile:hover{border-color:#8655E894;box-shadow:0 8px 24px #00000026}
+.asset-image{background:var(--surface-2)}
+.tab{color:var(--muted)}
+.tab:hover{color:var(--text)}
+.tab.selected,.view-switch button.selected{background:#8655E81F;border-color:#8655E866;color:#D4BFFC}
+.view-switch,.search-field,.asset-sort-control select,select{background:var(--surface);border-color:var(--border);color:var(--muted)}
+.asset-sort-control select{color:var(--text)}
+.card-bottom,.detail-utility,.asset-trait-row,.glyph-wallet-heading{border-color:var(--border)}
+.asset-collection,.card-bottom,.wallet-caption,.portfolio-note,.price-source,.price-muted,.asset-sort-note,.asset-sort-control{color:var(--muted)!important}
+.text-lime,.source-link{color:var(--accent)}
+.verified{color:var(--accent)}
+.verified svg{fill:var(--primary);stroke:var(--text)}
+.utility-icon,.glyph-wallet-icon,.wallet-symbol{background:#8655E821;border-color:#8655E866;color:var(--accent)}
+.utility-icon.purple{background:#D874C71A;color:var(--secondary)}
+.status,.match-tag,.inline-message.success,.glyph-auth-state.verified{background:#8655E81A;color:#D4BFFC;border-color:#8655E866}
+.status.simulated,.status.planned{background:#D874C712;color:#E6A3DB;border-color:#D874C747}
+.status.announced{background:#D874C712;color:#E6A3DB;border-color:#D874C747}
+.status.unavailable{background:var(--surface-2);border-color:var(--border);color:var(--muted)}
+.inline-message{background:var(--surface-2);border-color:var(--border);color:var(--muted)}
+.inline-message.error,.field-error,.hero-wallet-error{color:#EEA4D9}
+.glyph-intro-card{background:var(--surface);border-color:var(--border)}
+.glyph-auth-state,.glyph-account-chip{background:var(--surface-2);border-color:var(--border);color:var(--muted)}
+.glyph-state-line.linked,.glyph-state-line.success{color:var(--accent)}
+.glyph-wallet-count{background:var(--surface-2);border-color:var(--border);color:var(--muted)}
+.glyph-wallet-card .glyph-state-line{color:var(--muted)}
+.glyph-state-line.is-linked{color:var(--accent)}
+.funnel-bar{background:linear-gradient(90deg,var(--primary),var(--secondary))}
+dialog,dialog:has(.asset-detail-layout) .modal-top{background:var(--surface);border-color:var(--border)}
+dialog::backdrop{background:#0B0A12BF;backdrop-filter:blur(8px)}
+.asset-owner-address,.asset-detail-info .asset-owner-address,.asset-detail-empty,.asset-detail-footer,.asset-resource-summary small,.asset-trait-row dt{color:var(--muted)}
+.asset-address-copy:hover{color:var(--accent);background:#8655E821}
+.asset-address-copy:focus-visible{outline-color:var(--accent)}
+.asset-trait-row dd{color:var(--text)}
+.asset-benefits,.asset-resource-summary,.detail-note{background:var(--surface-2);border-color:var(--border)}
+.asset-resource-summary p{color:var(--accent)}
+.asset-traits-scroll,.asset-detail-info .asset-price-detail,.asset-detail-footer{border-color:var(--border)}
+.asset-traits-scroll{scrollbar-color:#51405F var(--surface)}
+*{scrollbar-color:#51405F var(--bg);scrollbar-width:thin}
+.toast{background:var(--surface-2);border-color:var(--border);color:var(--text)}
+@media(max-width:700px){.hero{min-height:285px}.hero .hero-content{padding:28px 23px}.hero::before{background-image:linear-gradient(90deg,#0B0A12E8 0%,#0B0A1299 55%,#0B0A1252 100%),url('/assets/hero-game.jpeg');background-position:center,65% center}.hero h2{font-size:32px}.hero-coordinate{font-size:6px;right:14px}}
