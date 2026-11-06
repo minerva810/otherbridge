@@ -37,3 +37,5 @@ h1,h2,h3,h4,h5,h6{font-family:var(--display);font-stretch:100%}
 .stat-number,.total-value-amount,.asset-price-row strong,.asset-token-id,.wallet-address,.wallet-id,.asset-owner-address,.nav-count,.tab-count,.inline-count,.step-marker,.hero-coordinate,.events-table td,.funnel-row>strong,.funnel-count{font-family:var(--data);font-variant-numeric:tabular-nums;letter-spacing:0}
 .wallet-form.wallet-search input,.search-field input{font-family:var(--data)}
 .stat-number small,.events-table th{font-family:var(--font)}
+
+.sidebar>.nav-label:not(.resources-label){margin-top:30px}.assets-portfolio{margin-top:28px}.assets-portfolio .toolbar{margin-top:20px}

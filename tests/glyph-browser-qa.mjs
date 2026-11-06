@@ -14,6 +14,7 @@ try{
  const screenshot=async file=>{const shot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});await writeFile(path.join(out,file),Buffer.from(shot.data,'base64'));};
  await send('Page.enable');await send('Runtime.enable');await send('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});await send('Page.navigate',{url:'http://localhost:3000/#onboarding'});
  for(let i=0;i<200;i++){if(await evaluate('Boolean(document.querySelector(".glyph-login-card"))'))break;await pause(200);}assert.ok(await evaluate('Boolean(document.querySelector(".glyph-login-card"))'));
+ assert.equal(await evaluate('location.hash'),'#activity');
  assert.equal(await evaluate('document.querySelector(".glyph-login-card .btn-primary").disabled'),false);
  assert.equal(await evaluate('getComputedStyle(document.querySelector(".glyph-loading-card")).display'),'none');
  assert.equal(await evaluate('getComputedStyle(document.querySelector("#glyph-auth-slot>[data-glyph-open]")).display'),'none');
@@ -29,7 +30,7 @@ try{
  await popup('.glyph-signup-button','official Glyph signup');
  await popup('.glyph-login-card .btn-primary','official Glyph login');
  assert.equal(await evaluate('import("/glyph/glyph.js").then(module=>module.getStatus().signedIn)'),false);
- await evaluate('location.hash="wallets"');await pause(200);await evaluate('location.hash="onboarding"');await pause(200);assert.ok(await evaluate('Boolean(document.querySelector(".glyph-login-card"))'));
+ await evaluate('location.hash="wallets"');await pause(200);await evaluate('location.hash="activity"');await pause(200);assert.ok(await evaluate('Boolean(document.querySelector(".glyph-login-card"))'));
  assert.equal(await evaluate('document.querySelectorAll("[data-complete-step]").length'),0);assert.deepEqual(errors,[]);
  console.log('PASS: Glyph SDK initialization, guest state, desktop/mobile layout, signup/login popup entry, popup cancellation and SPA remount. No account credentials entered or signatures submitted.');
 }finally{socket?.close();browser.kill();}

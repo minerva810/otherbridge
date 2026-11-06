@@ -37,19 +37,21 @@ try{
   assert.equal(await evaluate('document.documentElement.scrollWidth > window.innerWidth'),false);
   const capture=async name=>{const image=await cdp('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});await writeFile(path.join(out,name),Buffer.from(image.data,'base64'));};
   await capture('desktop.png');
-  assert.equal(await evaluate('getComputedStyle(document.querySelector("#asset-grid")).gridTemplateColumns.split(" ").length'),4,'Overview uses four grid columns');
-  assert.equal(await evaluate('[...document.querySelectorAll(".asset-card")].filter(el=>getComputedStyle(el).display!=="none").length'),4,'Overview previews four cards');
-  await click('.all-assets-link');await pause(100);
-  assert.equal(await evaluate('getComputedStyle(document.querySelector("#asset-grid")).gridTemplateColumns.split(" ").length'),6,'Full portfolio uses six grid columns');
+  assert.equal(await evaluate('getComputedStyle(document.querySelector("#asset-grid")).gridTemplateColumns.split(" ").length'),6,'Unified ASSETS uses six columns');
+  assert.equal(await evaluate('[...document.querySelectorAll(".asset-card")].filter(el=>getComputedStyle(el).display!=="none").length'),6,'ASSETS displays the entire portfolio');
+  assert.equal(await evaluate('document.querySelectorAll("#sidebar .workspace,[data-nav=overview],[data-nav=portfolio],.all-assets-link").length'),0);
+  assert.equal(await evaluate('document.querySelectorAll("[data-nav=assets]").length'),1);
+  assert.ok(await evaluate('document.querySelector("[data-nav=utilities]").textContent.includes("UTILITIES")&&document.querySelector("[data-nav=activity]").textContent.includes("ACTIVITY")'));
+  for(const legacy of ['overview','portfolio']){await evaluate('location.hash='+JSON.stringify(legacy));await pause(100);assert.equal(await evaluate('location.hash'),'#assets');assert.equal(await evaluate('document.querySelector("#breadcrumb-current").textContent'),'ASSETS');}
   await capture('portfolio-six-columns.png');
   await click('[data-view="list"]');assert.equal(await evaluate('getComputedStyle(document.querySelector("#asset-grid")).gridTemplateColumns.split(" ").length'),1);
-  await click('[data-view="grid"]');await evaluate('location.hash="overview"');await pause(100);
+  await click('[data-view="grid"]');await evaluate('location.hash="assets"');await pause(100);
   await click('[data-filter="KODA"]');assert.equal(await evaluate('document.querySelectorAll(".asset-card").length'),1);
   await click('.asset-card');assert.equal(await evaluate('document.querySelector("#modal").open'),true);assert.ok((await evaluate('document.querySelector("#modal-content").textContent')).includes('Koda #7214'));
   await click('#modal [data-utility="koda-play"]');assert.ok((await evaluate('document.querySelector("#modal-content").textContent')).includes('SIMULATED'));
   await click('#modal-close');await evaluate('location.hash="utilities"');await pause(100);
   await click('[data-utility-filter="LIVE"]');assert.equal(await evaluate('document.querySelectorAll(".registry-card").length'),1);
-  await evaluate('location.hash="overview"');await pause(100);assert.equal(await evaluate('document.querySelector(".hero [data-action=\\"start-guide\\"]")'),null);assert.equal(await evaluate('document.querySelectorAll(".dashboard-aside,.recommendation-panel,.journey-panel").length'),0);assert.ok(await evaluate('Math.abs(document.querySelector(".dashboard-grid>div").getBoundingClientRect().width-document.querySelector(".dashboard-grid").getBoundingClientRect().width)<1'));await click('[data-nav="onboarding"]');assert.equal(await evaluate('location.hash'),'#onboarding');
+  await evaluate('location.hash="assets"');await pause(100);assert.equal(await evaluate('document.querySelector(".hero [data-action=\\"start-guide\\"]")'),null);assert.equal(await evaluate('document.querySelectorAll(".dashboard-aside,.recommendation-panel,.journey-panel").length'),0);assert.equal(await evaluate('document.querySelectorAll(".assets-portfolio").length'),1);await click('[data-nav="activity"]');assert.equal(await evaluate('location.hash'),'#activity');
   for(let i=0;i<150;i++){if(await evaluate('Boolean(document.querySelector(".glyph-login-card"))'))break;await pause(200);}
   assert.ok(await evaluate('Boolean(document.querySelector(".glyph-login-card"))'));
   assert.equal(await evaluate('document.querySelectorAll("[data-complete-step]").length'),0);
@@ -59,24 +61,24 @@ try{
   assert.equal(await evaluate('document.querySelectorAll(".wallet-row").length'),1);assert.equal(await evaluate('document.querySelector("#nav-asset-count").textContent'),'0');
   await evaluate('document.querySelector("#wallet-input").value="0x1234567890abcdef1234567890abcdef12345678"');await click('#wallet-form button');assert.ok((await evaluate('document.querySelector("#wallet-error").textContent')).includes('이미'));
   await click('[data-action="resolve"]');
-  for(let i=0;i<100;i++){if(await evaluate('location.hash==="#portfolio"'))break;await pause(200);}
-  assert.equal(await evaluate('location.hash'),'#portfolio');assert.equal(await evaluate('document.querySelectorAll(".asset-card").length'),0);
+  for(let i=0;i<100;i++){if(await evaluate('location.hash==="#assets"'))break;await pause(200);}
+  assert.equal(await evaluate('location.hash'),'#assets');assert.equal(await evaluate('document.querySelectorAll(".asset-card").length'),0);
   await evaluate('location.hash="wallets"');await pause(100);
   await click('[data-remove-wallet]');assert.equal(await evaluate('document.querySelectorAll(".wallet-row").length'),0);
-  await click('[data-action="demo"]');await pause(100);await evaluate('location.hash="portfolio"');await pause(100);
+  await click('[data-action="demo"]');await pause(100);await evaluate('location.hash="assets"');await pause(100);
   await evaluate('const s=document.querySelector("#asset-search");s.value="7214";s.dispatchEvent(new Event("input"))');assert.equal(await evaluate('document.querySelectorAll(".asset-card").length'),1);
   await evaluate('location.hash="analytics"');await pause(100);assert.ok((await evaluate('document.querySelector("#main-content").textContent')).includes('asset_clicked'));
-  await evaluate('location.hash="overview"');await pause(100);await click('[data-action="reset-filter"]').catch(()=>{});
-  await evaluate('location.hash="portfolio"');await pause(100);await evaluate('const s2=document.querySelector("#asset-search");s2.value="";s2.dispatchEvent(new Event("input"))');await click('[data-filter="ALL"]');await evaluate('location.hash="overview"');await pause(100);
+  await evaluate('location.hash="assets"');await pause(100);await click('[data-action="reset-filter"]').catch(()=>{});
+  await evaluate('location.hash="assets"');await pause(100);await evaluate('const s2=document.querySelector("#asset-search");s2.value="";s2.dispatchEvent(new Event("input"))');await click('[data-filter="ALL"]');await evaluate('location.hash="assets"');await pause(100);
   await cdp('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});await pause(200);
   assert.equal(await evaluate('document.documentElement.scrollWidth > window.innerWidth'),false);await capture('mobile.png');
   await click('#menu-button');assert.equal(await evaluate('document.querySelector("#sidebar").classList.contains("open")'),true);await click('[data-nav="wallets"]');await pause(100);assert.equal(await evaluate('document.querySelector("#sidebar").classList.contains("open")'),false);
   const fixture=JSON.parse(await readFile(path.join(root,'.local','live-fixture.json'),'utf8'));
-  await evaluate('location.hash="overview"');await pause(100);
+  await evaluate('location.hash="assets"');await pause(100);
   await evaluate('document.querySelector("#hero-wallet-input").value="bad"');await click('#hero-wallet-form button');assert.ok((await evaluate('document.querySelector("#hero-wallet-error").textContent')).includes('EVM'));
   await evaluate(`document.querySelector('#hero-wallet-input').value=${JSON.stringify(fixture.owner)}`);await click('#hero-wallet-form button');
-  for(let i=0;i<150;i++){if(await evaluate('location.hash==="#portfolio"'))break;await pause(200);}
-  assert.equal(await evaluate('location.hash'),'#portfolio');assert.ok(await evaluate('document.querySelectorAll(".real-image").length>0'));
+  for(let i=0;i<300;i++){if(await evaluate('Boolean(document.querySelector(".real-image"))&&!document.querySelector("#hero-wallet-form button").disabled'))break;await pause(200);}
+  assert.equal(await evaluate('location.hash'),'#assets');assert.ok(await evaluate('document.querySelectorAll(".real-image").length>0'));
   for(let i=0;i<300;i++){if(await evaluate('document.querySelectorAll(".asset-card .asset-price-row").length>0&&![...document.querySelectorAll(".asset-card .asset-price-row")].some(el=>el.textContent.includes("조회 중"))'))break;await pause(200);}
   assert.ok(await evaluate('[...document.querySelectorAll(".asset-card .asset-price-row")].every(el=>!el.textContent.includes("Buy now")&&el.querySelector("strong"))'),'Asset prices are shown without Buy now labels');
   assert.equal(await evaluate('document.querySelector("#asset-sort").value'),'PRICE_DESC');
@@ -89,7 +91,7 @@ try{
   assert.ok(await evaluate('!document.querySelector(".asset-price-detail").textContent.includes("Buy now")'));
   assert.ok(await evaluate('document.querySelector(".asset-price-detail").textContent.includes("OpenSea")'));
   assert.ok(await evaluate('document.querySelector("#modal-content").textContent.includes("opensea")'));await click('#modal-close');
-  await cdp('Emulation.setDeviceMetricsOverride',{width:1440,height:1150,deviceScaleFactor:1,mobile:false});await evaluate('location.hash="overview"');await pause(200);await capture('desktop-final.png');
+  await cdp('Emulation.setDeviceMetricsOverride',{width:1440,height:1150,deviceScaleFactor:1,mobile:false});await evaluate('location.hash="assets"');await pause(200);await capture('desktop-final.png');
   assert.deepEqual(errors,[],'No uncaught browser exceptions');
   console.log('PASS: desktop/mobile layouts, filters, details, guide, wallet validation, real API empty result, live owned NFTs/images, dynamic OpenSea details, analytics and mobile navigation. No uncaught browser errors. Screenshots: .local/qa/');
 }finally{socket?.close();browser.kill();}

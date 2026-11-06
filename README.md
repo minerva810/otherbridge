@@ -100,10 +100,13 @@ SDK 클라이언트는 `scripts/build-glyph.mjs`에서 브라우저 전용 번�
 `POST /api/v1/assets/prices`는 지원 컬렉션의 `{assets:[{contract,token_id}]}`를 최대 60개 받습니다. API 키는 서버에서만 사용합니다.
 
 ### NFT 정렬
-기본값은 ETH 가격 내림차순입니다. 현재 조회된 ETH 판매가와 Portfolio 평가액을 함께 비교합니다. 확인할 수 없는 가격은 마지막에 배치합니다. Overview와 My assets에서 가격순, 최근 취득순, 토큰 번호 오름차순을 선택할 수 있으며 선택은 현재 브라우저 세션에 유지됩니다. 최근 취득순은 지갑으로 마지막 전송된 시각을 사용하며 Alchemy의 acquiredAt이 없으면 Transfers API의 수신 기록을 최신순으로 최대 5,000건 확인해 보완합니다. 미확인 날짜는 마지막에 표시합니다. 토큰 번호는 BigInt로 비교합니다.
+기본값은 ETH 가격 내림차순입니다. 현재 조회된 ETH 판매가와 Portfolio 평가액을 함께 비교합니다. 확인할 수 없는 가격은 마지막에 배치합니다. ASSETS에서 가격순, 최근 취득순, 토큰 번호 오름차순을 선택할 수 있으며 선택은 현재 브라우저 세션에 유지됩니다. 최근 취득순은 지갑으로 마지막 전송된 시각을 사용하며 Alchemy의 acquiredAt이 없으면 Transfers API의 수신 기록을 최신순으로 최대 5,000건 확인해 보완합니다. 미확인 날짜는 마지막에 표시합니다. 토큰 번호는 BigInt로 비교합니다.
 
 ### 총 자산액
 요약 박스는 총 자산액(ETH), 보유 NFT 수, 추가한 지갑 수, 매칭 유틸리티 순서입니다. 총액은 전체 조회 자산의 유효한 판매가·Portfolio 평가액을 BigInt wei 단위로 합산하며 검색·컬렉션 필터에 영향을 받지 않습니다. 중복 NFT는 한 번만 계산하고 가격 미확인·만료·샘플 자산은 제외합니다. 미확인 개수와 조회 진행 상태를 표시하며 가격 응답과 함께 합계를 갱신합니다.
 
 ### Typography
 제목은 Archivo, 큰 페이지·배너 제목은 Archivo의 width 축 87.5%인 SemiCondensed를 사용합니다. UI는 IBM Plex Sans, 가격·수치·지갑 주소·NFT 번호는 Roboto Mono를 사용하며, 한글은 Noto Sans KR로 보완합니다. 폰트 역할은 styles.css의 --display / --font / --data로 관리합니다.
+
+### Navigation
+기본 화면은 ASSETS(#assets)입니다. 기존 Overview의 배너·지갑 주소 입력·요약 지표와 My assets의 전체 NFT 목록·검색·필터·정렬을 한 화면으로 통합하며 데스크톱에서 6열로 표시합니다. 메뉴는 ASSETS / UTILITIES / ACTIVITY / Wallets이며 My workspace 선택 박스를 제거했습니다. ACTIVITY(#activity)는 Glyph 연결 상태 화면입니다. 기존 #overview·#portfolio는 #assets로, #onboarding은 #activity로 연결합니다.
