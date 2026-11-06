@@ -1,5 +1,6 @@
 import {EVM_ADDRESS, matchUtility} from './core.js';
 import {assetDetailLinks,renderAllTraits,currentAssetBenefits} from './asset-details.js';
+import {summarizeWallet} from './wallet-summary.js';
 import {mergeGlyphWallets} from './glyph-wallet-import.js';
 import {pricePresentation,PRICE_REFRESH_MS,sumAssetValues,formatEth} from './prices.js';
 import {SORT_OPTIONS,sortAssets,acquisitionTime} from './sorting.js';
@@ -120,6 +121,7 @@ function priceMarkup(asset,detail=false){
 }
 function updatePriceElements(){
   const total=$('#total-value-stat');if(total)total.innerHTML=totalValueContent();
+  $$('[data-wallet-metrics]').forEach(el=>{const wallet=state.wallets.find(w=>w.address.toLowerCase()===el.dataset.walletMetrics.toLowerCase());if(wallet)el.innerHTML=walletMetricsContent(wallet);});
   reorderAssetCards();
   $$('[data-price-asset]').forEach(el=>{const asset=state.assets.find(a=>a.id===el.dataset.priceAsset);if(asset)el.innerHTML=priceMarkup(asset,el.dataset.priceDetail==='true');});
 }
@@ -179,7 +181,17 @@ function utilityPage() {
   const utilities=registry.utilities.filter(u=>state.utilityFilter==='ALL'||state.utilityFilter==='MATCHED'&&matchUtility(u,state.assets).match_status!=='NOT_MATCHED'||u.category===state.utilityFilter||u.status===state.utilityFilter);
   return `${pageHeading('Ownership opens possibilities.','자산의 가치가 쓰임으로 이어지는 곳. 이용 조건과 상태를 확인하고 다음 행동을 선택하세요.')}${demoBar()}<div class="registry-filters">${[['ALL','All utilities'],['MATCHED','Matched to you'],['ACCESS','Access'],['GAME','Game'],['ECONOMIC','Economic'],['IP','IP & ownership'],['LIVE','Live now'],['SIMULATED','Simulated']].map(([id,label])=>`<button class="tab ${state.utilityFilter===id?'selected':''}" data-utility-filter="${id}" aria-pressed="${state.utilityFilter===id}">${label}</button>`).join('')}</div><div class="registry-grid">${utilities.length?utilities.map(u=>`<article class="registry-card"><div class="registry-top"><span class="utility-icon ${u.status==='SIMULATED'?'purple':''}">${icon(u.icon)}</span>${statusBadge(u.status)}</div><div class="eyebrow" style="font-size:8px">${esc(u.category)}</div><h3>${esc(u.title)}</h3><p>${esc(u.description)}</p><div class="registry-meta">${u.collections.map(id=>collectionFor(id).short).join(' · ')}</div><button class="btn btn-outline" data-utility="${u.id}">${esc(u.title_ko)} ${icon('arrow')}</button></article>`).join(''):'<div class="empty-state"><h3>매칭된 유틸리티가 없습니다.</h3><p>지원 컬렉션 자산이 있는 지갑을 먼저 조회하세요.</p></div>'}</div><div class="inline-message">LIVE는 확인된 현재 기능, SIMULATED는 요구사항 기반 체험 시나리오입니다. 보유 조건 일치는 최종 이용 자격을 뜻하지 않습니다. 공식 발표나 로드맵을 검증하지 못한 항목에는 ANNOUNCED·PLANNED를 부여하지 않습니다.</div>`;
 }
-function walletPage() {return `${pageHeading('One bridge. Every wallet.','EVM 주소를 추가해 Yuga 자산을 읽기 전용으로 조회하세요.',false)}${demoBar()}<section class="wallet-panel"><h2>Your added wallets <span class="text-lime">${state.wallets.length}</span></h2><p>지갑 연결이나 서명 없이 공개된 NFT 보유 정보를 확인합니다.<br>지원 컬렉션: BAYC · MAYC · Koda · Otherdeed · Otherdeed Expanded</p>${walletForm()}<div id="wallet-list">${state.wallets.map((w,i)=>`<div class="wallet-row"><span class="wallet-symbol">${icon('wallet')}</span><div><div class="wallet-address">${esc(w.address)}</div><div class="wallet-caption">${esc(w.demo?'Sample wallet · 실제 조회하지 않은 체험용 주소':w.label||'Added wallet · Ethereum Mainnet')}</div></div><div class="wallet-actions"><button class="icon-button" data-copy="${esc(w.address)}" aria-label="주소 복사">${icon('copy')}</button><button class="icon-button" data-remove-wallet="${esc(w.address)}" aria-label="지갑 삭제">${icon('trash')}</button></div></div>`).join('')}</div><div class="inline-message ${state.notice?'error':''}" id="api-notice">${esc(state.notice||'실제 NFT 조회에는 서버의 ALCHEMY_API_KEY 설정이 필요합니다. 키가 없는 환경에서는 샘플 체험을 이용할 수 있으며 입력한 주소의 보유 정보를 생성하지 않습니다.')}</div><div class="modal-buttons"><button class="btn btn-primary ${state.loading?'loading':''}" data-action="resolve" ${state.loading?'disabled':''}>${icon('refresh')}${state.loading?'온체인 자산 조회 중…':'추가한 지갑 조회하기'}</button><button class="btn btn-outline" data-action="demo">샘플 포트폴리오 체험</button></div></section><div class="info-strip"><div>${icon('shield')}<span>주소는 비회원 세션 동안 보관합니다. 조회 중인 주소가 동일한 사람의 지갑임을 증명하지 않습니다.</span></div></div>`;}
+function walletMetricsContent(wallet){
+  const summary=summarizeWallet(wallet,state.assets,{pending:pricePending});
+  const value=summary.value_eth==null?'—':formatEth(summary.value_eth);
+  let note=summary.demo?'샘플 · 평가액 미제공':!summary.queried?'보유 자산 조회 필요':summary.pending_count?'가격 조회 중 · '+summary.priced_count+'/'+summary.total_count+'개 확인':summary.unpriced_count?'확인된 가격 합계 · 미확인 '+summary.unpriced_count+'개':summary.total_count?'판매가·Portfolio 평가액 합산':'지원 컬렉션 자산 없음';
+  if(summary.stale)note='최근 보유 캐시 · '+note;
+  return '<div class="wallet-metric"><span>보유 NFT</span><strong data-wallet-nft-count>'+esc(summary.nft_count??'—')+'</strong></div><div class="wallet-metric wallet-value-metric"><span>자산 (ETH)</span><strong data-wallet-eth>'+esc(value)+'</strong></div><small class="wallet-metrics-note">'+esc(note)+'</small>';
+}
+function walletRow(wallet){
+  return '<div class="wallet-row" data-wallet-address="'+esc(wallet.address)+'"><span class="wallet-symbol">'+icon('wallet')+'</span><div class="wallet-identity"><div class="wallet-address-line"><span class="wallet-address">'+esc(wallet.address)+'</span><button type="button" class="icon-button wallet-copy" data-copy="'+esc(wallet.address)+'" aria-label="지갑 주소 복사" title="지갑 주소 복사">'+icon('copy')+'</button></div><div class="wallet-caption">'+esc(wallet.demo?'Sample wallet · 실제 조회하지 않은 체험용 주소':wallet.label||'Added wallet · Ethereum Mainnet')+'</div></div><div class="wallet-metrics" data-wallet-metrics="'+esc(wallet.address)+'" aria-live="polite">'+walletMetricsContent(wallet)+'</div><div class="wallet-actions"><button type="button" class="icon-button" data-remove-wallet="'+esc(wallet.address)+'" aria-label="지갑 삭제">'+icon('trash')+'</button></div></div>';
+}
+function walletPage() {return `${pageHeading('One bridge. Every wallet.','EVM 주소를 추가해 Yuga 자산을 읽기 전용으로 조회하세요.',false)}${demoBar()}<section class="wallet-panel"><h2>Your added wallets <span class="text-lime">${state.wallets.length}</span></h2><p>지갑 연결이나 서명 없이 공개된 NFT 보유 정보를 확인합니다.<br>지원 컬렉션: BAYC · MAYC · Koda · Otherdeed · Otherdeed Expanded</p>${walletForm()}<div id="wallet-list">${state.wallets.map(walletRow).join('')}</div><div class="inline-message ${state.notice?'error':''}" id="api-notice">${esc(state.notice||'실제 NFT 조회에는 서버의 ALCHEMY_API_KEY 설정이 필요합니다. 키가 없는 환경에서는 샘플 체험을 이용할 수 있으며 입력한 주소의 보유 정보를 생성하지 않습니다.')}</div><div class="modal-buttons"><button class="btn btn-primary ${state.loading?'loading':''}" data-action="resolve" ${state.loading?'disabled':''}>${icon('refresh')}${state.loading?'온체인 자산 조회 중…':'추가한 지갑 조회하기'}</button><button class="btn btn-outline" data-action="demo">샘플 포트폴리오 체험</button></div></section><div class="info-strip"><div>${icon('shield')}<span>주소는 비회원 세션 동안 보관합니다. 조회 중인 주소가 동일한 사람의 지갑임을 증명하지 않습니다.</span></div></div>`;}
 function walletForm() {return `<form class="wallet-form wallet-search" id="wallet-form" novalidate><span class="wallet-search-field">${icon('search')}<input id="wallet-input" type="text" autocomplete="off" spellcheck="false" placeholder="지갑 주소 입력 (0x로 시작하는 EVM 주소)" aria-label="EVM 지갑 주소" aria-describedby="wallet-error" maxlength="42"></span><button class="wallet-search-submit" type="submit">주소 추가</button></form><div id="wallet-error" class="field-error" role="alert"></div>`;}
 function activityPage() {
   return pageHeading('ACTIVITY','Glyph 인증 후 지갑별 연결 여부를 확인하세요.',false)+'<div id="glyph-onboarding-slot"><div class="glyph-loading-card"><span class="glyph-loading-orbit">✳</span><h2>Glyph 연결 준비 중</h2><p>공식 Glyph SDK를 불러오고 있습니다.</p><button class="btn btn-outline" data-action="retry-glyph">다시 불러오기</button></div></div>';
@@ -208,7 +220,7 @@ function render() {
   if(glyphModule)glyphModule.setContext(glyphContext());
   window.dispatchEvent(new Event('otherbridge:render'));
   if(state.page==='activity')void ensureGlyph().catch(()=>{});
-  if(state.page==='assets')void loadAssetPrices();
+  if(['assets','wallets'].includes(state.page))void loadAssetPrices();
   if(state.sort==='RECENT'&&(state.page==='assets'))void upgradeAcquisitionTimes();
 }
 function bindContent(root=$('#main-content')) {
@@ -289,7 +301,7 @@ async function resolvePortfolio(force=false,{navigate=true,quiet=false}={}) {
     if(!type.includes('application/json'))throw new Error('조회 서버에서 올바른 응답을 받지 못했습니다. 잠시 후 다시 시도하세요.');
     const data=await response.json();if(!response.ok)throw new Error(data.error||'조회 중 오류가 발생했습니다.');
     if(walletScope!==state.wallets.map(w=>w.address.toLowerCase()).sort().join('|'))return;
-    if(Array.isArray(data.wallets))state.wallets=state.wallets.map(wallet=>({...wallet,last_synced_at:data.wallets.find(result=>result.address.toLowerCase()===wallet.address.toLowerCase())?.last_synced_at||null}));
+    if(Array.isArray(data.wallets))state.wallets=state.wallets.map(wallet=>{const result=data.wallets.find(result=>result.address.toLowerCase()===wallet.address.toLowerCase());return {...wallet,last_synced_at:result?.last_synced_at||null,holdings_stale:Boolean(result?.stale)};});
     state.assets=data.assets;state.lastSynced=data.last_synced_at;state.stale=Boolean(data.stale);state.notice=data.warning||'';save();event('portfolio_loaded',{asset_count:state.assets.length,mode:'live'});if(!quiet)toast(data.stale?'API 오류로 최근 캐시를 표시합니다.':`${state.wallets.length}개 지갑에서 ${state.assets.length}개 지원 자산을 조회했습니다.`);if(navigate)location.hash='assets';
   }catch(error){state.notice=error.name==='TimeoutError'?'조회 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.':error.message;toast(state.notice,true);}
   finally{state.loading=false;refreshWalletView();void refreshGlyphPortfolio();}
@@ -357,6 +369,6 @@ $('#menu-button').addEventListener('click',()=>$('#sidebar').classList.toggle('o
 document.addEventListener('click',e=>{if(window.innerWidth<=700&&!e.target.closest('#sidebar')&&!e.target.closest('#menu-button'))$('#sidebar').classList.remove('open');});
 window.addEventListener('hashchange',()=>{render();$('#sidebar').classList.remove('open');window.scrollTo({top:0});});
 render();
-setInterval(()=>{if(!document.hidden&&(state.page==='assets'||$('#modal').open&&$('#modal .asset-detail-layout'))){updatePriceElements();void loadAssetPrices();}},15000);
+setInterval(()=>{if(!document.hidden&&(['assets','wallets'].includes(state.page)||$('#modal').open&&$('#modal .asset-detail-layout'))){updatePriceElements();void loadAssetPrices();}},15000);
 fetch('/api/v1/health',{signal:AbortSignal.timeout(10000)}).then(r=>r.ok?r.json():null).then(data=>{state.apiAvailable=data?.service==='other-bridge';state.providers=data?.providers||null;if(state.page==='wallets')render();}).catch(()=>{});
 if(!state.events.some(e=>e.event_name==='portfolio_loaded'))event('portfolio_loaded',{mode:state.mode});

@@ -1,5 +1,7 @@
 # Other Bridge
 
+Wallets는 주소 옆 복사 아이콘과 지갑별 지원 NFT 개수·ETH 합계를 표시합니다. 합계는 자산 카드와 동일한 판매가/Portfolio 평가액을 사용하며 가격 응답에 따라 갱신됩니다. 미조회 지갑, 조회 결과가 빈 지갑, 일부 가격 누락, 샘플 자산을 구분합니다.
+
 테마: Background `#0B0A12`, Surface `#171321`, Primary `#8655E8`, Text `#F4F1F8`, Border `#363044`, Muted `#A9A2B8`, Secondary `#D874C7`. 공통 색상 토큰은 `public/styles.css`, 화면별 테마는 `public/theme.css`에서 관리합니다. 배너 원본은 사용자가 제공한 `otherside.jpeg`를 `public/assets/hero-game.jpeg`로 복사한 파일입니다.
 
 NFT 상세 팝업은 좌상단 이미지, 이미지 아래 전체 Traits, 우상단 가격·보유 지갑·개별 OpenSea/Etherscan 링크, 우하단 활용 기능·확인된 혜택으로 구성됩니다. Traits는 Alchemy/OpenSea가 제공한 메타데이터이며 표시 개수 제한이 없습니다. 혜택은 공식 출처·기간·보유 조건이 확인된 항목만 표시하고, 등록된 정보가 없으면 미확인 상태를 안내합니다.
