@@ -2,3 +2,5 @@
 #glyph-onboarding-slot:has(>.glyph-onboarding)>.glyph-loading-card{display:none}#glyph-auth-slot:has(>.glyph-auth-actions)>[data-glyph-open]{display:none}
 
 .glyph-wallet-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));align-items:start}.glyph-wallet-card{padding:19px}.glyph-wallet-heading{margin-bottom:12px;padding-bottom:13px}.glyph-wallet-card .glyph-state-line{margin:10px 0 0}.glyph-wallet-next{padding-top:13px;margin-top:13px}.glyph-linked-footer{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-top:22px;padding:16px 0;color:#8f9f80;font-size:10px;line-height:1.8}.glyph-linked-footer .btn{flex-shrink:0}@media(max-width:700px){.glyph-wallet-grid{grid-template-columns:1fr}.glyph-linked-footer{align-items:flex-start;flex-direction:column}.glyph-linked-footer .btn{width:100%}}
+
+.glyph-intro-card h2,.glyph-loading-card h2{font-stretch:87.5%}.glyph-wallet-address,.glyph-account-chip,.glyph-wallet-count,.glyph-step-number,.glyph-status-toolbar>span{font-family:var(--data);font-variant-numeric:tabular-nums;letter-spacing:0}

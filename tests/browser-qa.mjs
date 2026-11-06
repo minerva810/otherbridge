@@ -21,11 +21,17 @@ try{
   await cdp('Page.enable');await cdp('Runtime.enable');
   await cdp('Emulation.setDeviceMetricsOverride',{width:1440,height:1150,deviceScaleFactor:1,mobile:false});
   await cdp('Page.navigate',{url:'http://localhost:3000'});await pause(1600);await evaluate('document.fonts.ready.then(()=>true)');
+  for(const family of ['Archivo','IBM Plex Sans','Roboto Mono'])assert.ok(await evaluate('document.fonts.load('+JSON.stringify('500 16px "'+family+'"')+',"Your assets 123.45").then(faces=>faces.length>0&&faces.every(face=>face.status==="loaded"))'),family+' webfont loads');
+  assert.ok(await evaluate('getComputedStyle(document.body).fontFamily.includes("IBM Plex Sans")'));
+  assert.ok(await evaluate('getComputedStyle(document.querySelector(".hero h2")).fontFamily.includes("Archivo")'));
+  assert.equal(await evaluate('getComputedStyle(document.querySelector(".hero h2")).fontStretch'),'87.5%');
+  assert.ok(await evaluate('getComputedStyle(document.querySelector(".stat-number")).fontFamily.includes("Roboto Mono")'));
   assert.equal(await evaluate('document.querySelectorAll(".asset-card").length'),0);
   assert.deepEqual(await evaluate('[...document.querySelectorAll(".stats .stat-label")].map(el=>el.textContent.trim())'),['Total value (ETH)','Total NFTs','Added wallets','Matched utilities']);
   assert.equal(await evaluate('document.querySelector(".total-value-amount").textContent'),'0');
   await evaluate('location.hash="wallets"');await pause(100);await click('[data-action="demo"]');await pause(100);
   assert.equal(await evaluate('document.querySelectorAll(".asset-card").length'),6);
+  assert.ok(await evaluate('getComputedStyle(document.querySelector(".asset-token-id")).fontFamily.includes("Roboto Mono")'));
   assert.equal(await evaluate('document.querySelector(".total-value-amount").textContent'),'—');
   assert.equal(await evaluate('document.querySelector("#nav-asset-count").textContent'),'6');
   assert.equal(await evaluate('document.documentElement.scrollWidth > window.innerWidth'),false);

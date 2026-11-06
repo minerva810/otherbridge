@@ -104,3 +104,6 @@ SDK 클라이언트는 `scripts/build-glyph.mjs`에서 브라우저 전용 번�
 
 ### 총 자산액
 요약 박스는 총 자산액(ETH), 보유 NFT 수, 추가한 지갑 수, 매칭 유틸리티 순서입니다. 총액은 전체 조회 자산의 유효한 판매가·Portfolio 평가액을 BigInt wei 단위로 합산하며 검색·컬렉션 필터에 영향을 받지 않습니다. 중복 NFT는 한 번만 계산하고 가격 미확인·만료·샘플 자산은 제외합니다. 미확인 개수와 조회 진행 상태를 표시하며 가격 응답과 함께 합계를 갱신합니다.
+
+### Typography
+제목은 Archivo, 큰 페이지·배너 제목은 Archivo의 width 축 87.5%인 SemiCondensed를 사용합니다. UI는 IBM Plex Sans, 가격·수치·지갑 주소·NFT 번호는 Roboto Mono를 사용하며, 한글은 Noto Sans KR로 보완합니다. 폰트 역할은 styles.css의 --display / --font / --data로 관리합니다.
