@@ -74,11 +74,12 @@ node tests/browser-qa.mjs  # 로컬 서버가 3000 포트에서 실행 중이어
 
 - `user.evmWallet`, `user.linkedWallets`로 연결 상태를 확인합니다. `linkedWallets` 미제공은 미확인입니다.
 - `useGlyphOwnershipCheck`를 `chainId: 1`, `includeDelegates: true`로 호출합니다. `tokens.owner`, NFT ID, 컨트랙트와 네트워크를 함께 매칭해 `linked` / `delegated`를 판정합니다.
-- 지갑·NFT별 연결, 위임, 별도 위임 불필요, 미확인을 구분합니다. 직접 소유·인식된 연결 지갑 접근에는 추가 위임을 강제하지 않습니다.
-- 완료된 연결·위임 CTA는 숨깁니다. 미연결 지갑은 `GlyphView.LINKED_ACCOUNTS`로 연결하고, 위임이 필요한 경우 SDK의 공식 Portal로 이동합니다. 사용자 복귀·계정 변경·자산 변경 시 다시 확인합니다.
+- 온보딩 화면은 지갑 주소와 Glyph linked / not linked / 미확인 상태만 표시합니다. NFT 개별 목록·NFT 개수·위임 상태는 나열하지 않습니다. 내부 상태 판정은 유지하며 계정 연결을 NFT 이용 자격으로 표시하지 않습니다.
+- 미연결·미확인 지갑은 `GlyphView.LINKED_ACCOUNTS`로 연결 상태를 확인합니다. 연결된 지갑에는 연결 버튼을 반복 표시하지 않습니다. 사용자 복귀·계정 변경·자산 변경 시 다시 확인하며, Otherside 공식 사이트에서 최종 이용 조건을 확인할 수 있습니다.
 - 인증 토큰이나 서명은 앱 자체 저장소·이벤트에 기록하지 않습니다. 계정별·자산별 조회 결과는 메모리에만 두고 이전 계정 결과는 재사용하지 않습니다. 서버에 Glyph 신원을 주장하는 클라이언트 값을 보내 권한을 부여하지 않습니다.
 - 샘플 데이터·기존 수동 체크리스트는 완료 판정에 사용하지 않습니다. 외부 SDK 초기화 실패, 조회 실패, 누락 응답은 성공으로 추정하지 않습니다.
 - `public/onboarding-state.js`가 순수 상태 판정 모델이며 `tests/onboarding.test.mjs`가 Wallet A/B/C, 부분 위임, 네트워크·NFT 오매칭, 로그인 전, 계정 변경, 오류를 검증합니다.
+- `client/linked-wallet-cards.js`가 간결한 지갑 카드를 렌더링합니다. 보유 NFT가 31개 또는 1,000개여도 표시 항목과 카드 내용이 증가하지 않는지 `tests/linked-wallet-cards.test.mjs`로 검증합니다.
 
 SDK 클라이언트는 `scripts/build-glyph.mjs`에서 브라우저 전용 번들 `public/glyph/`로 빌드합니다. `npm run build`와 `npm run dev:local`이 이 단계를 먼저 수행합니다. SDK는 온보딩 또는 로그인 진입 시에만 지연 로드되어 비회원 NFT 조회를 차단하지 않습니다. 실제 사용자 계정의 로그인·서명·지갑 연결·위임 실행은 해당 사용자가 공식 UI에서 진행해야 합니다.
 
