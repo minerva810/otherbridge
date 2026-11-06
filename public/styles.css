@@ -21,3 +21,12 @@
 .total-value-number{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px}.total-value-amount{min-width:0;max-width:100%;overflow-wrap:anywhere;font-size:clamp(20px,2.1vw,32px);font-variant-numeric:tabular-nums}.total-value-number small{margin-left:3px}#total-value-stat .stat-foot{line-height:1.6}
 
 .dashboard-grid{grid-template-columns:minmax(0,1fr)}
+
+.compact-portfolio .asset-grid:not(.list-view){grid-template-columns:repeat(4,minmax(0,1fr))}
+.asset-grid.large-grid:not(.list-view){grid-template-columns:repeat(6,minmax(0,1fr))}
+.compact-portfolio .asset-grid .asset-card:nth-child(n+4){display:block}
+.compact-portfolio .asset-grid .asset-card:nth-child(n+5){display:none}
+.asset-grid.list-view{grid-template-columns:minmax(0,1fr)}
+@media(max-width:1199px){.compact-portfolio .asset-grid:not(.list-view){grid-template-columns:repeat(3,minmax(0,1fr))}.asset-grid.large-grid:not(.list-view){grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:900px){.compact-portfolio .asset-grid:not(.list-view){grid-template-columns:repeat(2,minmax(0,1fr))}.asset-grid.large-grid:not(.list-view){grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:700px){.compact-portfolio .asset-grid:not(.list-view),.asset-grid.large-grid:not(.list-view){grid-template-columns:repeat(2,minmax(0,1fr))}}

@@ -31,6 +31,13 @@ try{
   assert.equal(await evaluate('document.documentElement.scrollWidth > window.innerWidth'),false);
   const capture=async name=>{const image=await cdp('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});await writeFile(path.join(out,name),Buffer.from(image.data,'base64'));};
   await capture('desktop.png');
+  assert.equal(await evaluate('getComputedStyle(document.querySelector("#asset-grid")).gridTemplateColumns.split(" ").length'),4,'Overview uses four grid columns');
+  assert.equal(await evaluate('[...document.querySelectorAll(".asset-card")].filter(el=>getComputedStyle(el).display!=="none").length'),4,'Overview previews four cards');
+  await click('.all-assets-link');await pause(100);
+  assert.equal(await evaluate('getComputedStyle(document.querySelector("#asset-grid")).gridTemplateColumns.split(" ").length'),6,'Full portfolio uses six grid columns');
+  await capture('portfolio-six-columns.png');
+  await click('[data-view="list"]');assert.equal(await evaluate('getComputedStyle(document.querySelector("#asset-grid")).gridTemplateColumns.split(" ").length'),1);
+  await click('[data-view="grid"]');await evaluate('location.hash="overview"');await pause(100);
   await click('[data-filter="KODA"]');assert.equal(await evaluate('document.querySelectorAll(".asset-card").length'),1);
   await click('.asset-card');assert.equal(await evaluate('document.querySelector("#modal").open'),true);assert.ok((await evaluate('document.querySelector("#modal-content").textContent')).includes('Koda #7214'));
   await click('#modal [data-utility="koda-play"]');assert.ok((await evaluate('document.querySelector("#modal-content").textContent')).includes('SIMULATED'));
