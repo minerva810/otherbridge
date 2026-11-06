@@ -48,6 +48,10 @@ try{
   await click('[data-view="grid"]');await evaluate('location.hash="assets"');await pause(100);
   await click('[data-filter="KODA"]');assert.equal(await evaluate('document.querySelectorAll(".asset-card").length'),1);
   await click('.asset-card');assert.equal(await evaluate('document.querySelector("#modal").open'),true);assert.ok((await evaluate('document.querySelector("#modal-content").textContent')).includes('Koda #7214'));
+  const layout=await evaluate(`(()=>{const r=s=>{const b=document.querySelector(s).getBoundingClientRect();return {x:b.x,y:b.y,w:b.width,h:b.height}};return {image:r('.asset-detail-image'),info:r('.asset-detail-info'),traits:r('.asset-detail-traits'),uses:r('.asset-detail-uses')}})()`);
+  assert.ok(layout.image.x<layout.info.x&&layout.image.y<layout.traits.y&&layout.traits.x<layout.uses.x,'Image and traits occupy the left column, utilities the lower right');
+  assert.ok(layout.image.w>250&&layout.image.w<450,'Image occupies roughly one quadrant');
+  await capture('asset-detail-desktop.png');
   await click('#modal [data-utility="koda-play"]');assert.ok((await evaluate('document.querySelector("#modal-content").textContent')).includes('SIMULATED'));
   await click('#modal-close');await evaluate('location.hash="utilities"');await pause(100);
   await click('[data-utility-filter="LIVE"]');assert.equal(await evaluate('document.querySelectorAll(".registry-card").length'),1);
@@ -90,7 +94,13 @@ try{
   await click(`[data-asset="${fixture.asset_id}"]`);for(let i=0;i<100;i++){if(await evaluate('document.querySelector("#modal-content").textContent.includes("opensea")'))break;await pause(200);}
   assert.ok(await evaluate('!document.querySelector(".asset-price-detail").textContent.includes("Buy now")'));
   assert.ok(await evaluate('document.querySelector(".asset-price-detail").textContent.includes("OpenSea")'));
-  assert.ok(await evaluate('document.querySelector("#modal-content").textContent.includes("opensea")'));await click('#modal-close');
+  assert.ok(await evaluate('document.querySelector("#modal-content").textContent.includes("opensea")'));
+  const [contract,token]=fixture.asset_id.split(':');
+  assert.equal(await evaluate('document.querySelector("[data-asset-chain]").href'),`https://etherscan.io/nft/${contract}/${token}`);
+  assert.equal(await evaluate('document.querySelector("[data-asset-market]").href'),`https://opensea.io/item/ethereum/${contract}/${token}`);
+  assert.equal((await evaluate('document.querySelector(".asset-address-copy").dataset.copy')).toLowerCase(),fixture.owner.toLowerCase());
+  assert.ok(await evaluate('document.querySelector("#modal").scrollWidth<=document.querySelector("#modal").clientWidth'),'Mobile popup has no horizontal overflow');
+  await capture('asset-detail-mobile.png');await click('#modal-close');
   await cdp('Emulation.setDeviceMetricsOverride',{width:1440,height:1150,deviceScaleFactor:1,mobile:false});await evaluate('location.hash="assets"');await pause(200);await capture('desktop-final.png');
   assert.deepEqual(errors,[],'No uncaught browser exceptions');
   console.log('PASS: desktop/mobile layouts, filters, details, guide, wallet validation, real API empty result, live owned NFTs/images, dynamic OpenSea details, analytics and mobile navigation. No uncaught browser errors. Screenshots: .local/qa/');

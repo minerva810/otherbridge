@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev:local": "node scripts/build-glyph.mjs && node --experimental-sqlite server.mjs",
-    "check": "node --check server.mjs && node --check public/app.js && node --test tests/core.test.mjs tests/providers.test.mjs tests/onboarding.test.mjs tests/prices.test.mjs tests/sorting.test.mjs tests/linked-wallet-cards.test.mjs tests/glyph-wallet-import.test.mjs",
+    "check": "node --check server.mjs && node --check public/app.js && node --test tests/core.test.mjs tests/providers.test.mjs tests/onboarding.test.mjs tests/prices.test.mjs tests/sorting.test.mjs tests/linked-wallet-cards.test.mjs tests/glyph-wallet-import.test.mjs tests/asset-details.test.mjs",
     "test:live": "node tests/live-api.mjs",
     "install:ci": "node scripts/install-ci.mjs",
     "dev": "node scripts/run-framework.mjs dev",

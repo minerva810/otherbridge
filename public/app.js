@@ -1,4 +1,5 @@
 import {EVM_ADDRESS, matchUtility} from './core.js';
+import {assetDetailLinks,renderAllTraits,currentAssetBenefits} from './asset-details.js';
 import {mergeGlyphWallets} from './glyph-wallet-import.js';
 import {pricePresentation,PRICE_REFRESH_MS,sumAssetValues,formatEth} from './prices.js';
 import {SORT_OPTIONS,sortAssets,acquisitionTime} from './sorting.js';
@@ -115,7 +116,7 @@ function priceMarkup(asset,detail=false){
   const source=price?'OpenSea · '+time:'';
   const row='<div class="asset-price-row" title="'+esc(source)+'"><strong class="'+(p.available?'text-lime':'price-muted')+'">'+esc(p.amount)+'</strong></div>';
   if(!detail)return row;
-  return row+(price?'<p class="price-source">'+esc(source)+'</p>':'')+(price?.kind==='PORTFOLIO_VALUE'?'<p class="price-source">Portfolio 추정 가치 · 컬렉션 최고 구매 제안 기준'+(price.original_currency==='WETH'?' (WETH를 ETH와 1:1로 표시)':'')+'</p>':'')+(!asset.demo?'<a class="source-link" href="'+esc(assetOpenSeaUrl(asset))+'" target="_blank" rel="noopener noreferrer">OpenSea에서 확인 ↗</a>':'');
+  return row+(price?'<p class="price-source">'+esc(source)+'</p>':'')+(price?.kind==='PORTFOLIO_VALUE'?'<p class="price-source">Portfolio 추정 가치 · 컬렉션 최고 구매 제안 기준'+(price.original_currency==='WETH'?' (WETH를 ETH와 1:1로 표시)':'')+'</p>':'');
 }
 function updatePriceElements(){
   const total=$('#total-value-stat');if(total)total.innerHTML=totalValueContent();
@@ -226,25 +227,27 @@ function bindContent(root=$('#main-content')) {
   const sort=$('#asset-sort',root);if(sort)sort.addEventListener('change',e=>{state.sort=e.target.value;save();render();});
   const search=$('#asset-search',root);if(search)search.addEventListener('input',e=>{state.search=e.target.value;const grid=$('#asset-grid');const temp=document.createElement('div');temp.innerHTML=assetGrid(true);grid.replaceWith(temp.firstElementChild);bindContent($('#asset-grid'));});
 }
-function modal(content,eyebrow='OTHER BRIDGE') {$('#modal-content').innerHTML=content;$('#modal-eyebrow').textContent=eyebrow;hydrateIcons($('#modal'));bindContent($('#modal-content'));if(!$('#modal').open)$('#modal').showModal();$('#modal-content').scrollTop=0;}
+function modal(content,eyebrow='OTHER BRIDGE') {$('#modal-content').innerHTML=content;$('#modal-eyebrow').textContent=eyebrow;hydrateIcons($('#modal'));bindContent($('#modal-content'));if(!$('#modal').open)$('#modal').showModal();$('#modal-content').scrollTop=0;$('#modal').scrollTop=0;}
 function closeModal() {$('#modal').close();}
 function showAsset(id,detailState='') {
+  const scroll=detailState?$('#modal').scrollTop:0;
   const a=state.assets.find(a=>a.id===id);if(!a)return;state.activeAssetId=id;if(!detailState)event('asset_clicked',{asset_id:id});
-  const c=collectionFor(a.collection);const utilities=matching([a]);
-  modal(`<div class="modal-asset-header"><div class="modal-asset-art">${assetArt(a)}</div><div><div class="detail-label">${esc(c.name)}</div><h2 id="modal-title" class="modal-title">${esc(c.short)} <span class="asset-token-id">#${esc(a.token_id)}</span></h2><div class="modal-subtitle">Ethereum · ${esc(a.asset_type)}<br><span class="asset-owner-address"><span>${esc(short(a.owner_wallet))}</span><button type="button" class="asset-address-copy" data-copy="${esc(a.owner_wallet)}" aria-label="지갑 주소 복사" title="지갑 주소 복사">${icon('copy')}</button></span></div><div class="asset-price-detail" data-price-detail="true" data-price-asset="${esc(a.id)}">${priceMarkup(a,true)}</div><div class="traits">${a.traits.slice(0,4).map(t=>`<span class="trait"><small>${esc(t.trait_type)}</small>${esc(t.value)}</span>`).join('')||'<span class="trait">속성 정보 없음</span>'}</div></div></div><div class="modal-section"><h3>What you can explore <span class="text-lime">${utilities.length}</span></h3>${utilities.map(u=>`<button class="detail-utility" data-utility="${u.id}"><span class="utility-icon ${u.status==='SIMULATED'?'purple':''}">${icon(u.icon)}</span><div><strong>${esc(u.title_ko)}</strong><small>${a.demo?'Sample ownership match':matchUtility(u,[a]).match_status}</small></div>${statusBadge(u.status)}${icon('arrow')}</button>`).join('')}</div><div class="modal-notice">${a.demo?'이 NFT와 일러스트는 서비스 체험용 샘플입니다. 실제 NFT 이미지·보유 정보가 아닙니다.':'조회 주소: '+esc(a.owner_wallet)+'<br>마지막 조회: '+esc(formatDate(a.last_synced_at))}<br>공개 보유 조건과 최종 캠페인 자격은 별개이며 추가 확인이 필요합니다.</div><div class="modal-buttons"><button class="btn btn-primary" data-action="start-guide">Glyph 연결 상태 확인 ${icon('arrow')}</button></div>`,c.short+' · ASSET DETAILS');
-  if(!a.demo){
-    const detail=document.createElement('div');detail.className='modal-notice';detail.textContent=detailState||'Alchemy · OpenSea에서 최신 메타데이터를 확인하는 중…';$('#modal-content').append(detail);
-    if(!detailState)loadAssetDetails(id);
-  }
+  const c=collectionFor(a.collection);const utilities=matching([a]);const links=assetDetailLinks(a);
+  const benefits=currentAssetBenefits(a,registry.benefits);
+  const resources=a.traits.filter(t=>/resource|자원/i.test(t.trait_type));
+  modal(`<div class="asset-detail-layout"><div class="asset-detail-image modal-asset-art">${assetArt(a)}</div><section class="asset-detail-info"><div class="detail-label">${esc(c.name)}</div><h2 id="modal-title" class="modal-title">${esc(c.short)} <span class="asset-token-id">#${esc(a.token_id)}</span></h2><div class="modal-subtitle">Ethereum · ${esc(a.asset_type)}</div><div class="asset-owner-address"><span>${esc(short(a.owner_wallet))}</span><button type="button" class="asset-address-copy" data-copy="${esc(a.owner_wallet)}" aria-label="지갑 주소 복사" title="지갑 주소 복사">${icon('copy')}</button></div><div class="asset-detail-links">${links?`<a class="source-link" data-asset-market href="${esc(links.opensea)}" target="_blank" rel="noopener noreferrer">OpenSea에서 확인 ${icon('external')}</a><a class="source-link" data-asset-chain href="${esc(links.etherscan)}" target="_blank" rel="noopener noreferrer">Etherscan에서 확인 ${icon('external')}</a>`:'<span class="asset-detail-empty">체험용 샘플 자산</span>'}</div><div class="asset-price-detail" data-price-detail="true" data-price-asset="${esc(a.id)}">${priceMarkup(a,true)}</div></section><section class="asset-detail-traits"><div class="asset-panel-heading"><h3>Traits</h3><span>${a.traits.length}</span></div><p class="asset-detail-caption">NFT 메타데이터의 전체 속성</p><div class="asset-traits-scroll" tabindex="0" aria-label="전체 NFT Traits">${renderAllTraits(a.traits)}</div></section><section class="asset-detail-uses"><div class="asset-panel-heading"><h3>이 NFT로 할 수 있는 것</h3><span>${utilities.length}</span></div><div class="asset-utility-list">${resources.length?`<div class="asset-resource-summary"><strong>자원 속성</strong><p>${resources.map(t=>esc(t.trait_type)+': '+esc(t.value)).join(' · ')}</p><small>채집 가능 여부와 수수료는 공식 서비스의 현재 조건을 확인하세요.</small></div>`:''}${utilities.map(u=>`<button class="detail-utility" data-utility="${u.id}"><span class="utility-icon ${u.status==='SIMULATED'?'purple':''}">${icon(u.icon)}</span><div><strong>${esc(u.title_ko)}</strong><small>${esc(u.description)}</small></div>${statusBadge(u.status)}${icon('arrow')}</button>`).join('')||'<p class="asset-detail-empty">현재 확인된 활용 정보가 없습니다.</p>'}</div><div class="asset-benefits"><h3>현재 확인된 혜택</h3>${benefits.length?benefits.map(b=>`<a class="asset-benefit" href="${esc(b.source_url)}" target="_blank" rel="noopener noreferrer"><strong>${esc(b.title_ko||b.title)}</strong><p>${esc(b.description)}</p><small>보유 조건 기준 · 세부 자격은 공식 서비스에서 확인 ${icon('external')}</small></a>`).join(''):`<p class="asset-detail-empty">현재 확인된 보상·Claim 정보가 없습니다.</p><a class="source-link" href="${['BAYC','MAYC'].includes(a.collection)?'https://boredapeyachtclub.com/':'https://www.otherside.xyz/'}" target="_blank" rel="noopener noreferrer">최신 혜택·이용 조건 확인 ${icon('external')}</a>`}</div></section></div><div class="asset-detail-footer"><p>${a.demo?'체험용 샘플 NFT · 실제 보유 정보가 아닙니다.':`보유 지갑: <span class="data-text">${esc(a.owner_wallet)}</span><br>마지막 보유 조회: ${esc(formatDate(a.last_synced_at))}`}</p><p class="asset-metadata-state" role="status">${esc(a.demo?'샘플 메타데이터':detailState||'Alchemy · OpenSea에서 메타데이터 확인 중…')}</p></div>`,c.short+' · ASSET DETAILS');
+  if(detailState)$('#modal').scrollTop=scroll;
+  if(!a.demo&&!detailState)loadAssetDetails(id);
 }
+
 async function loadAssetDetails(id){
   const asset=state.assets.find(a=>a.id===id);if(!asset||asset.demo)return;
   try{
     const response=await fetch(`/api/v1/assets/${encodeURIComponent(id)}?owner=${encodeURIComponent(asset.owner_wallet)}`,{signal:AbortSignal.timeout(45000)});
     const data=await response.json();if(!response.ok)throw new Error(data.error||'상세 정보를 불러오지 못했습니다.');
     state.assets=state.assets.map(a=>a.id===id?{...data.asset,market_price:a.market_price}:a);save();
-    if($('#modal').open&&state.activeAssetId===id&&$('#modal-content .modal-asset-header')){render();showAsset(id,`보유 정보: ${data.asset.ownership_source||'Alchemy'} · 메타데이터: ${(data.asset.metadata_sources||[]).join(' + ')}${data.warning?' · '+data.warning:''}`);}
-  }catch(error){if($('#modal').open&&state.activeAssetId===id&&$('#modal-content .modal-asset-header'))showAsset(id,error.message);}
+    if($('#modal').open&&state.activeAssetId===id&&$('#modal-content .asset-detail-layout')){render();showAsset(id,`보유 정보: ${data.asset.ownership_source||'Alchemy'} · 메타데이터: ${(data.asset.metadata_sources||[]).join(' + ')}${data.warning?' · '+data.warning:''}`);}
+  }catch(error){if($('#modal').open&&state.activeAssetId===id&&$('#modal-content .asset-detail-layout'))showAsset(id,error.message);}
 }
 function showUtility(id) {
   state.activeAssetId=null;
@@ -354,6 +357,6 @@ $('#menu-button').addEventListener('click',()=>$('#sidebar').classList.toggle('o
 document.addEventListener('click',e=>{if(window.innerWidth<=700&&!e.target.closest('#sidebar')&&!e.target.closest('#menu-button'))$('#sidebar').classList.remove('open');});
 window.addEventListener('hashchange',()=>{render();$('#sidebar').classList.remove('open');window.scrollTo({top:0});});
 render();
-setInterval(()=>{if(!document.hidden&&(state.page==='assets'||$('#modal').open&&$('#modal .modal-asset-header'))){updatePriceElements();void loadAssetPrices();}},15000);
+setInterval(()=>{if(!document.hidden&&(state.page==='assets'||$('#modal').open&&$('#modal .asset-detail-layout'))){updatePriceElements();void loadAssetPrices();}},15000);
 fetch('/api/v1/health',{signal:AbortSignal.timeout(10000)}).then(r=>r.ok?r.json():null).then(data=>{state.apiAvailable=data?.service==='other-bridge';state.providers=data?.providers||null;if(state.page==='wallets')render();}).catch(()=>{});
 if(!state.events.some(e=>e.event_name==='portfolio_loaded'))event('portfolio_loaded',{mode:state.mode});
