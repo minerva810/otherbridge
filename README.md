@@ -73,6 +73,7 @@ node tests/browser-qa.mjs  # 로컬 서버가 3000 포트에서 실행 중이어
 `client/glyph-entry.tsx`는 공식 `@use-glyph/sdk-react` 2.2.9의 Native Integration을 사용합니다. 별도의 Privy 앱 키를 요구하지 않습니다. `GlyphWalletProvider` / `useNativeGlyphConnection` / `useGlyph`로 연결과 인증을 구분하고, 공식 Glyph Portal에서 회원가입할 수 있습니다. SDK가 인증 서명을 완료하기 전에는 인증된 것으로 표시하지 않습니다.
 
 - `user.evmWallet`, `user.linkedWallets`로 연결 상태를 확인합니다. `linkedWallets` 미제공은 미확인입니다.
+- Glyph 인증이 완료되면 기본 EVM 지갑·스마트 지갑·기존 linked EVM 지갑을 비회원 세션 지갑 목록에 자동으로 합칩니다. 수동 추가 주소의 이름과 조회 기록은 유지하고 대소문자를 무시해 중복을 제거합니다. 최대 20개 제한에서 제외된 주소 수를 알리며, 새 주소의 NFT는 화면 이동 없이 조회합니다. 조회 중 추가 주소가 들어오면 최신 주소 목록으로 이어서 조회하고 오래된 응답은 적용하지 않습니다.
 - `useGlyphOwnershipCheck`를 `chainId: 1`, `includeDelegates: true`로 호출합니다. `tokens.owner`, NFT ID, 컨트랙트와 네트워크를 함께 매칭해 `linked` / `delegated`를 판정합니다.
 - 온보딩 화면은 지갑 주소와 Glyph linked / not linked / 미확인 상태만 표시합니다. NFT 개별 목록·NFT 개수·위임 상태는 나열하지 않습니다. 내부 상태 판정은 유지하며 계정 연결을 NFT 이용 자격으로 표시하지 않습니다.
 - 미연결·미확인 지갑은 `GlyphView.LINKED_ACCOUNTS`로 연결 상태를 확인합니다. 연결된 지갑에는 연결 버튼을 반복 표시하지 않습니다. 사용자 복귀·계정 변경·자산 변경 시 다시 확인하며, Otherside 공식 사이트에서 최종 이용 조건을 확인할 수 있습니다.

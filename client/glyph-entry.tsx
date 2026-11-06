@@ -76,7 +76,7 @@ function GlyphController(){
     window.addEventListener('focus',resume);document.addEventListener('visibilitychange',resume);
     return()=>{window.removeEventListener('focus',resume);document.removeEventListener('visibilitychange',resume);};
   },[]);
-  const status=useMemo(()=>({...evaluateOnboarding({ready:glyph.ready,authenticated:glyph.authenticated,user:glyph.user,wallets:current.wallets,assets:current.assets,ownershipChecks:verifiedFor===scope?checks:{},checking}),checkedAt:verifiedFor===scope?checkedAt:null,error,user:glyph.authenticated?{id:glyph.user?.id,evmWallet:glyph.user?.evmWallet,linkedWallets:glyph.user?.linkedWallets}:null}),[glyph.ready,glyph.authenticated,glyph.user,current,checks,checking,checkedAt,error,scope,verifiedFor]);
+  const status=useMemo(()=>({...evaluateOnboarding({ready:glyph.ready,authenticated:glyph.authenticated,user:glyph.user,wallets:current.wallets,assets:current.assets,ownershipChecks:verifiedFor===scope?checks:{},checking}),checkedAt:verifiedFor===scope?checkedAt:null,error,user:glyph.authenticated?{id:glyph.user?.id,evmWallet:glyph.user?.evmWallet,smartWallet:glyph.user?.smartWallet,linkedWallets:glyph.user?.linkedWallets}:null}),[glyph.ready,glyph.authenticated,glyph.user,current,checks,checking,checkedAt,error,scope,verifiedFor]);
   useEffect(()=>notify(status),[status]);
   async function login(){setError('');setBusy(true);try{if(!isConnected){await connect();}else{const success=await glyph.signIn();if(!success)setError('Glyph 인증을 완료하지 못했습니다. 팝업을 허용하고 인증을 다시 시도하세요.');}}catch{setError('Glyph 로그인이 취소되었거나 연결하지 못했습니다. 팝업을 허용하고 다시 시도하세요.');}finally{setBusy(false);}}
   function logout(){generation.current++;inFlight.current=false;setChecks({});setCheckedAt(null);glyph.logout();record('glyph_logout');}

@@ -1,4 +1,5 @@
 import {EVM_ADDRESS, matchUtility} from './core.js';
+import {mergeGlyphWallets} from './glyph-wallet-import.js';
 import {pricePresentation,PRICE_REFRESH_MS,sumAssetValues,formatEth} from './prices.js';
 import {SORT_OPTIONS,sortAssets,acquisitionTime} from './sorting.js';
 
@@ -273,19 +274,21 @@ async function searchHeroWallet(e) {
   if(state.notice&&state.page==='overview'){state.heroError=state.notice;const error=$('#hero-wallet-error');if(error)error.textContent=state.heroError;}
 }
 function removeWallet(address) {state.wallets=state.wallets.filter(w=>w.address!==address);state.assets=state.assets.filter(a=>a.owner_wallet!==address);save();render();toast('조회 목록에서 지갑을 삭제했습니다.');}
-async function resolvePortfolio(force=false) {
+async function resolvePortfolio(force=false,{navigate=true,quiet=false}={}) {
   if(state.loading)return;if(!state.wallets.length){showAddWallet();return;}
   if(state.mode==='demo'){event('portfolio_loaded',{mode:'demo'});toast('샘플 포트폴리오를 새로고침했습니다. 실제 조회는 내 지갑 주소를 추가해 시작하세요.');return;}
-  state.loading=true;state.notice='';render();
+  const addresses=state.wallets.map(w=>w.address);const walletScope=[...addresses].map(a=>a.toLowerCase()).sort().join('|');
+  state.loading=true;state.notice='';refreshWalletView();
   try {
-    const response=await fetch('/api/v1/portfolio/resolve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({wallets:state.wallets.map(w=>w.address),force}),signal:AbortSignal.timeout(120000)});
+    const response=await fetch('/api/v1/portfolio/resolve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({wallets:addresses,force}),signal:AbortSignal.timeout(120000)});
     const type=response.headers.get('content-type')||'';
     if(!type.includes('application/json'))throw new Error('조회 서버에서 올바른 응답을 받지 못했습니다. 잠시 후 다시 시도하세요.');
     const data=await response.json();if(!response.ok)throw new Error(data.error||'조회 중 오류가 발생했습니다.');
+    if(walletScope!==state.wallets.map(w=>w.address.toLowerCase()).sort().join('|'))return;
     if(Array.isArray(data.wallets))state.wallets=state.wallets.map(wallet=>({...wallet,last_synced_at:data.wallets.find(result=>result.address.toLowerCase()===wallet.address.toLowerCase())?.last_synced_at||null}));
-    state.assets=data.assets;state.lastSynced=data.last_synced_at;state.stale=Boolean(data.stale);state.notice=data.warning||'';save();event('portfolio_loaded',{asset_count:state.assets.length,mode:'live'});toast(data.stale?'API 오류로 최근 캐시를 표시합니다.':`${state.wallets.length}개 지갑에서 ${state.assets.length}개 지원 자산을 조회했습니다.`);location.hash='portfolio';
+    state.assets=data.assets;state.lastSynced=data.last_synced_at;state.stale=Boolean(data.stale);state.notice=data.warning||'';save();event('portfolio_loaded',{asset_count:state.assets.length,mode:'live'});if(!quiet)toast(data.stale?'API 오류로 최근 캐시를 표시합니다.':`${state.wallets.length}개 지갑에서 ${state.assets.length}개 지원 자산을 조회했습니다.`);if(navigate)location.hash='portfolio';
   }catch(error){state.notice=error.name==='TimeoutError'?'조회 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.':error.message;toast(state.notice,true);}
-  finally{state.loading=false;render();}
+  finally{state.loading=false;refreshWalletView();void refreshGlyphPortfolio();}
 }
 function helpModal() {modal(`<div class="help-content"><h2 class="modal-title" id="modal-title">A bridge to what’s next.</h2><p>Other Bridge는 Yuga 생태계 NFT의 공개 보유 정보를 모으고, 유틸리티를 발견해 공식 Otherside 서비스로 이어주는 독립 프로젝트입니다. Yuga Labs의 공식 서비스는 아닙니다.</p><h3>01 · Bring your addresses</h3><p>여러 EVM 주소를 추가하고 지원 컬렉션을 통합 조회합니다. 서명 없이 주소를 조회하며, 주소 추가가 지갑 소유권 인증을 의미하지 않습니다.</p><h3>02 · Discover the possibilities</h3><p>LIVE · ANNOUNCED · PLANNED · SIMULATED · UNAVAILABLE로 상태를 구분합니다. 이 버전에서 검증한 Glyph 안내만 LIVE로, 나머지는 체험 시나리오로 표시합니다.</p><h3>03 · Take the next step</h3><p>가이드를 따라 공식 사이트에서 다음 단계를 확인하세요. Other Bridge에서 거래, 위임, Claim을 실행하지 않습니다.</p><div class="modal-notice">샘플 NFT 이미지·보유 데이터는 체험용입니다. 비회원 주소와 이벤트는 세션에 저장됩니다. 실제 NFT 조회 API 키는 서버 환경변수로만 설정합니다.</div><div class="modal-buttons"><button class="btn btn-primary" data-action="start-guide">온보딩 가이드 시작 ${icon('arrow')}</button></div></div>`,'THE OTHER BRIDGE GUIDE');}
 function handleAction(action) {
@@ -299,23 +302,45 @@ function handleAction(action) {
   if(action==='demo'){state.wallets=structuredClone(demoWallets);state.assets=structuredClone(sampleAssets);state.mode='demo';state.notice='';state.lastSynced=null;state.stale=false;save();event('portfolio_loaded',{mode:'demo'});location.hash='overview';render();toast('샘플 포트폴리오를 불러왔습니다.');}
   if(action==='export-events'){const blob=new Blob([JSON.stringify(state.events,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='other-bridge-events.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 }
+let lastGlyphImportKey=null;
+let glyphPortfolioQueued=false;
+let glyphPortfolioRunning=false;
+function refreshWalletView(){
+  if(state.page!=='onboarding'){render();return;}
+  $('#nav-wallet-count').textContent=state.wallets.length;$('#nav-asset-count').textContent=state.assets.length;
+  if(glyphModule)glyphModule.setContext(glyphContext());
+}
+async function refreshGlyphPortfolio(){
+  if(glyphPortfolioRunning||!glyphPortfolioQueued||state.loading)return;
+  if(!state.wallets.length||state.mode!=='live'){glyphPortfolioQueued=false;return;}
+  glyphPortfolioRunning=true;glyphPortfolioQueued=false;
+  try{await resolvePortfolio(false,{navigate:false,quiet:true});}
+  finally{glyphPortfolioRunning=false;if(glyphPortfolioQueued)void refreshGlyphPortfolio();}
+}
+function importGlyphAccountWallets(status){
+  const result=mergeGlyphWallets(state.wallets,status);
+  if(!result.import_key){lastGlyphImportKey=null;glyphPortfolioQueued=false;return;}
+  if(result.import_key===lastGlyphImportKey)return;
+  lastGlyphImportKey=result.import_key;
+  const needsLookup=result.wallets.some(w=>result.account_addresses.includes(w.address)&&!w.last_synced_at);
+  if(result.added.length){
+    if(state.mode==='demo'){state.assets=[];state.lastSynced=null;state.stale=false;}
+    state.wallets=result.wallets;state.mode='live';save();event('wallet_added',{source:'glyph',wallet_count:result.added.length});
+    refreshWalletView();toast('Glyph 계정의 지갑 '+result.added.length+'개를 추가했습니다.');
+  }
+  if(result.added.length||needsLookup){glyphPortfolioQueued=true;void refreshGlyphPortfolio();}
+  if(result.skipped.length)toast('최대 20개 지갑까지 지원하여 Glyph 지갑 '+result.skipped.length+'개를 추가하지 못했습니다. 지갑 목록을 정리한 뒤 다시 연결해 주세요.',true);
+}
 window.addEventListener('otherbridge:glyph-status',e=>{
   state.glyph=e.detail;if(e.detail.ready){state.glyphLoadError='';clearTimeout(glyphLoadingTimer);}
+  importGlyphAccountWallets(e.detail);
   const caption=$('#profile-button small');if(caption)caption.textContent=e.detail.signedIn?'Glyph authenticated':'Guest session';
   // Glyph owns the onboarding portal; status updates must not replace its host.
   if(state.page==='overview')render();
   else if(state.page==='onboarding'&&e.detail.error&&!$('#glyph-onboarding-slot .glyph-onboarding')){state.glyphLoadError=e.detail.error;render();}
 });
 window.addEventListener('otherbridge:glyph-event',e=>{const {event:name,...detail}=e.detail;event(name,detail);});
-window.addEventListener('otherbridge:glyph-import',async e=>{
-  if(!state.glyph?.signedIn)return;
-  const addresses=[...new Set((e.detail?.addresses||[]).filter(a=>typeof a==='string'&&EVM_ADDRESS.test(a)).map(a=>a.toLowerCase()))];
-  const existing=state.wallets.filter(w=>!w.demo);const merged=[...new Set([...existing.map(w=>w.address.toLowerCase()),...addresses])];
-  if(merged.length>20){toast('한 번에 최대 20개 지갑을 조회할 수 있습니다. 조회 목록을 정리한 뒤 다시 시도하세요.',true);return;}
-  if(!addresses.length){toast('Glyph에서 조회할 EVM 지갑을 확인하지 못했습니다.',true);return;}
-  state.wallets=merged.map(address=>existing.find(w=>w.address.toLowerCase()===address)||{address,label:'Glyph account wallet',demo:false});
-  if(state.mode==='demo')state.assets=[];state.mode='live';state.filter='ALL';state.search='';save();await resolvePortfolio();location.hash='onboarding';render();
-});
+
 document.addEventListener('click',e=>{
   if(e.target.closest('[data-glyph-open]')){location.hash='onboarding';void ensureGlyph().catch(()=>{});}
   const link=e.target.closest('[data-official]');if(link){if(link.getAttribute('aria-disabled')==='true'){e.preventDefault();return;}const destination=link.dataset.official;event('official_link_clicked',{destination,utility_id:link.dataset.utilityId||null,step:link.dataset.step||null});if(destination==='glyph'||destination==='otherside')event(destination+'_link_clicked',{destination});}
